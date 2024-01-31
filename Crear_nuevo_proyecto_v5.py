@@ -4,6 +4,7 @@ import shutil
 import tkinter as tk
 from tkinter import messagebox
 from tkinter import ttk
+import time
 
 
 # Lo que falta por hacer es lo siguiente:
@@ -37,12 +38,6 @@ LOGO_PATH = "./Stpdn_Logos_Color.png"
 logo = None
 
 class AutocompleteCombobox(ttk.Combobox):
-    # def set_completion_list(self, completion_list):
-    #     self._completion_list = sorted(completion_list, key=str.lower)
-    #     self.bind('<KeyRelease>', self.handle_keyrelease)
-    #     self.bind('<FocusIn>', lambda event: self.set_values(event.widget))
-    #     self.bind('<Button-1>', lambda event: self.set_values(event.widget))
-
     def __init__(self, master, *args, **kwargs):
         ttk.Combobox.__init__(self, master, *args, **kwargs)
         self.valid_label = tk.Label(master, text="", font=('Helvetica', 8))
@@ -88,13 +83,16 @@ class AutocompleteCombobox(ttk.Combobox):
         if event.keysym in ('Up', 'Down', 'Control_R', 'Control_L', 'Return'):
             return
 
-        # Check if the entered text is empty
-        if not self.get():
-            self.set_completion_list(get_existing_clients())
-            return
+        # Update the time of the last key release
+        self.last_key_release_time = time.time()
 
-        # After 300 milliseconds, call the autocomplete function
-        self.after(300, self.autocomplete)
+        # After 2000 milliseconds (2 seconds), call the autocomplete function
+        self.after(500, self.check_autocomplete)
+
+    def check_autocomplete(self):
+        # Check if the time difference is greater than 2 seconds
+        if time.time() - self.last_key_release_time >= 0.5:
+            self.autocomplete()
 
 
 
