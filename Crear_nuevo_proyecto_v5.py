@@ -38,11 +38,16 @@ LOGO_PATH = "./Stpdn_Logos_Color.png"
 logo = None
 
 class AutocompleteCombobox(ttk.Combobox):
+    shared_valid_client = False
+    shared_valid_project = False
+
     def __init__(self, master, *args, **kwargs):
         ttk.Combobox.__init__(self, master, *args, **kwargs)
         self.name = ""
         self.valid_label = tk.Label(master, text="Name already used in another project", font=('Helvetica', 8), fg="red")
         self.valid_label.pack_forget()  # Initially hide the label
+        self.create_button = tk.Button(root)
+        # self.bind('<FocusOut>', lambda event: self.validate_entry())  # Bind the <FocusOut> event
         self._valid_items = set()
         self.last_key_release_time = 0
 
@@ -82,11 +87,31 @@ class AutocompleteCombobox(ttk.Combobox):
 
         # After 500 milliseconds (0.5 seconds), call the check_autocomplete function
         self.after(500, self.check_autocomplete)
+        self.after(500, self.validate_entry)
 
     def check_autocomplete(self):
         # Check if the time difference is greater than or equal to 0.5 seconds and the dropdown is not active
         if time.time() - self.last_key_release_time >= 0.5:
             self.autocomplete()
+
+    def validate_entry(self):
+        # Verificar si el entry tiene un valor válido al perder el foco
+        if self.get():
+            if self.name == "proyects":
+                AutocompleteCombobox.shared_valid_project = True
+                print(AutocompleteCombobox.shared_valid_project)
+            else:
+                AutocompleteCombobox.shared_valid_client = True
+                print(AutocompleteCombobox.shared_valid_client)
+
+        print(AutocompleteCombobox.shared_valid_client, AutocompleteCombobox.shared_valid_project)
+
+        if AutocompleteCombobox.shared_valid_client and AutocompleteCombobox.shared_valid_project:
+            print('hereererererer')
+            self.create_button.config(state=tk.NORMAL)
+        if not self.get():
+            return False
+
 
 
 def get_existing_clients():
@@ -406,6 +431,11 @@ def show_new_project_interface():
     entry_project._valid_items = all_orders
     entry_project.set_completion_list(all_orders)
     entry_project.pack()
+    create_button = entry_project.create_button
+    create_button.config(text="Crear Carpetas")
+    create_button.config(command=lambda: on_submit(combo_clients, entry_project, project_type_var))
+    create_button.config(state=tk.DISABLED)
+    create_button.pack()
 
     # Opciones para el tipo de proyecto, con "SEGUIMIENTOS" seleccionado por defecto
     project_type_var = tk.StringVar(value="SEGUIMIENTOS")
@@ -414,10 +444,10 @@ def show_new_project_interface():
     radio_follow_up = tk.Radiobutton(root, text="Seguimiento", variable=project_type_var, value="SEGUIMIENTOS")
     radio_follow_up.pack()
 
-    # Botón para crear las carpetas
-    create_button = tk.Button(root, text="Crear Carpetas", command= lambda: on_submit(combo_clients, entry_project, project_type_var))
-
-    create_button.pack()
+    # # Botón para crear las carpetas
+    # create_button = AutocompleteCombobox(root).create_button
+    # create_button['state'] = tk.DISABLED
+    # create_button.pack()
 
     # Etiqueta para mostrar el resultado de la operación
     label_result = tk.Label(root, text="")
