@@ -1,10 +1,10 @@
 import logging
 import os
 import shutil
+import time
 import tkinter as tk
 from tkinter import messagebox
 from tkinter import ttk
-import time
 
 
 # Lo que falta por hacer es lo siguiente:
@@ -40,60 +40,53 @@ logo = None
 class AutocompleteCombobox(ttk.Combobox):
     def __init__(self, master, *args, **kwargs):
         ttk.Combobox.__init__(self, master, *args, **kwargs)
-        self.valid_label = tk.Label(master, text="", font=('Helvetica', 8))
+        self.name = ""
+        self.valid_label = tk.Label(master, text="Name already used in another project", font=('Helvetica', 8), fg="red")
+        self.valid_label.pack_forget()  # Initially hide the label
         self._valid_items = set()
+        self.last_key_release_time = 0
+
+        self.bind('<KeyRelease>', self.handle_keyrelease)
 
     def set_completion_list(self, completion_list):
         self._completion_list = sorted(completion_list)
         self._hits = []
-        self.position = 0
-        self.bind('<KeyRelease>', self.handle_keyrelease)
         self['values'] = self._completion_list
 
-    def autocomplete(self, delta=0):
-        if delta:
-            self.delete(0, tk.END)
-        else:
-            self.position = len(self.get())
+    def autocomplete(self):
+        self.position = len(self.get())
+        _hits = [item for item in self._completion_list if item.lower().startswith(self.get().lower())]
 
-        _hits = []
-        for item in self._completion_list:
-            if item.lower().startswith(self.get().lower()):
-                _hits.append(item)
-
-        self._hits = _hits
         self['values'] = _hits
 
         if _hits:
             # Simulate pressing Down arrow key to show the dropdown
             self.event_generate('<Down>')
-        else:
+        elif not _hits:
             self.set_completion_list([])
 
         # Check if the entered client name is valid
-        if self.get() not in self._valid_items:
-            self.valid_label.config(text="Valid", fg="green")
-        else:
-            self.valid_label.config(text="Invalid", fg="red")
-
-    def set_values(self, widget):
-        widget['values'] = self._completion_list
+        if self.name == "proyects":
+            if self.get() not in self._valid_items:
+                self.valid_label.pack_forget()  # Hide the label
+            else:
+                self.valid_label.pack(side="top")  # Show the label
+                self.set_completion_list([])  # Hide dropdown options
 
     def handle_keyrelease(self, event):
-        if event.keysym in ('Up', 'Down', 'Control_R', 'Control_L', 'Return'):
+        if event.keysym in ('Up', 'Down', 'Control_R', 'Control_L'):
             return
 
         # Update the time of the last key release
         self.last_key_release_time = time.time()
 
-        # After 2000 milliseconds (2 seconds), call the autocomplete function
+        # After 500 milliseconds (0.5 seconds), call the check_autocomplete function
         self.after(500, self.check_autocomplete)
 
     def check_autocomplete(self):
-        # Check if the time difference is greater than 2 seconds
+        # Check if the time difference is greater than or equal to 0.5 seconds and the dropdown is not active
         if time.time() - self.last_key_release_time >= 0.5:
             self.autocomplete()
-
 
 
 def get_existing_clients():
@@ -394,6 +387,8 @@ def show_new_project_interface():
     label_client = tk.Label(root, text="Nombre del Cliente:")
     label_client.pack()
     combo_clients = AutocompleteCombobox(root)
+    combo_clients.name = "clients"
+    combo_clients._valid_items = get_existing_clients()
     combo_clients.set_completion_list(get_existing_clients())
     combo_clients.pack()
 
@@ -407,9 +402,10 @@ def show_new_project_interface():
     label_project = tk.Label(root, text="Nombre del Proyecto:")
     label_project.pack()
     entry_project = AutocompleteCombobox(root)
+    entry_project.name = "proyects"
+    entry_project._valid_items = all_orders
     entry_project.set_completion_list(all_orders)
     entry_project.pack()
-
 
     # Opciones para el tipo de proyecto, con "SEGUIMIENTOS" seleccionado por defecto
     project_type_var = tk.StringVar(value="SEGUIMIENTOS")
@@ -420,6 +416,7 @@ def show_new_project_interface():
 
     # Botón para crear las carpetas
     create_button = tk.Button(root, text="Crear Carpetas", command= lambda: on_submit(combo_clients, entry_project, project_type_var))
+
     create_button.pack()
 
     # Etiqueta para mostrar el resultado de la operación
