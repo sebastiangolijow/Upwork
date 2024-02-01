@@ -105,6 +105,20 @@ def get_existing_clients():
     all_clients = project_clients.union(seguimiento_clients)
     return sorted(list(all_clients))
 
+def get_all_orders(base_path):
+    all_orders = []
+
+    # Obtener todas las carpetas en la ruta base (proyectos o seguimiento)
+    for client in os.listdir(base_path):
+        client_path = os.path.join(base_path, client)
+
+        # Verificar si es un directorio
+        if os.path.isdir(client_path):
+            # Obtener todas las carpetas dentro del cliente (pedidos)
+            orders = [order for order in os.listdir(client_path) if os.path.isdir(os.path.join(client_path, order))]
+            all_orders.extend(orders)
+
+    return sorted(all_orders)
 
 ### We could add some validation to see if the name of the project or client is available
 def validate_input(client_name, project_name):
@@ -384,10 +398,18 @@ def show_new_project_interface():
     combo_clients.pack()
 
     # Añadir entrada para el nombre del proyecto
+    proyectos_path = "./Pruebas/DATA/PROYECTOS"
+    proyectos_orders = get_all_orders(proyectos_path)
+    seguimiento_path = "./Pruebas/DATA/SEGUIMIENTOS"
+    seguimiento_orders = get_all_orders(seguimiento_path)
+    all_orders = proyectos_orders + seguimiento_orders
+
     label_project = tk.Label(root, text="Nombre del Proyecto:")
     label_project.pack()
-    entry_project = tk.Entry(root)
+    entry_project = AutocompleteCombobox(root)
+    entry_project.set_completion_list(all_orders)
     entry_project.pack()
+
 
     # Opciones para el tipo de proyecto, con "SEGUIMIENTOS" seleccionado por defecto
     project_type_var = tk.StringVar(value="SEGUIMIENTOS")
