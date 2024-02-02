@@ -63,13 +63,13 @@ class AutocompleteCombobox(ttk.Combobox):
         _hits = [item for item in self._completion_list if item.lower().startswith(self.get().lower())]
 
         self['values'] = _hits
-
         if _hits:
             # Simulate pressing Down arrow key to show the dropdown
             self.event_generate('<Down>')
-        elif not _hits:
+        elif not _hits and self.get() == '':
+            self.set_completion_list(self._valid_items)
+        elif not _hits and self.get() != '':
             self.set_completion_list([])
-
         # Check if the entered client name is valid
         if self.name == "proyects":
             if self.get() not in self._valid_items:
