@@ -356,11 +356,13 @@ def start_backup(project_name):
 #PARTE GRÁFICA___________________________
 
 # Configuración de la ventana principal
+
+
 root = tk.Tk()
+
 root.title("Inicio/Final de Proyecto")
 root.geometry("700x600")  # Puedes ajustar el tamaño según tus necesidades
 background_color = "#1063FF"
-#root.configure(bg=background_color)
 
 
 def show_main_menu():
@@ -370,14 +372,14 @@ def show_main_menu():
     try:
         global logo
         logo = tk.PhotoImage(file=LOGO_PATH)
-        label_logo = tk.Label(root, image=logo)
+        label_logo = tk.Label(root, image=logo,height=220, width=1500)
         label_logo.pack(pady=10)  # Añade un poco de espacio vertical (pady) alrededor del logo
     except Exception as e:
         messagebox.showerror("Error", f"No se pudo cargar el logo: {e}")
 
     # Botones del menú principal
     quit_button = tk.Button(root, text="X", command=root.destroy)
-    quit_button.pack(side="right")
+    quit_button.pack(side="right", anchor="n")
     new_project_button = tk.Button(root, text="Crear Nuevo Proyecto", command=show_new_project_interface)
     new_project_button.pack(pady=10)
 
@@ -387,14 +389,11 @@ def show_main_menu():
 def show_new_project_interface():
     global logo  # Referencia a la variable global 'logo'
     clear_interface()
-    quit_button = tk.Button(root, text="X", command=root.destroy)
-    quit_button.pack(side="right")
-
     # Añadir el logo de Stupendastic
     try:
         # Asegúrate de que la ruta al archivo del logo es accesible y correcta
         logo = tk.PhotoImage(file=LOGO_PATH)
-        label_logo = tk.Label(root, image=logo)
+        label_logo = tk.Label(root, image=logo,height=220, width=1500)
         label_logo.pack()
     except Exception as e:
         messagebox.showerror("Error", f"No se pudo cargar el logo: {e}")
@@ -403,16 +402,13 @@ def show_new_project_interface():
 
     # Descripción del script
     description_label = tk.Label(root, text="\nEste Script creará carpetas en las siguientes ubicaciones:\nDATA, EDITORES EXTERNOS, FILMMAKERS, CONNECT\n")
-    description_label.pack()
 
     # Añadir menú desplegable con función de autocompletar para el nombre del cliente
     label_client = tk.Label(root, text="Nombre del Cliente:")
-    label_client.pack()
     combo_clients = AutocompleteCombobox(root)
     combo_clients.name = "clients"
     combo_clients._valid_items = get_existing_clients()
     combo_clients.set_completion_list(get_existing_clients())
-    combo_clients.pack()
 
     # Añadir entrada para el nombre del proyecto
     proyectos_path = "./Pruebas/DATA/PROYECTOS"
@@ -422,29 +418,22 @@ def show_new_project_interface():
     all_orders = proyectos_orders + seguimiento_orders
 
     label_project = tk.Label(root, text="Nombre del Proyecto:")
-    label_project.pack()
     entry_project = AutocompleteCombobox(root)
     entry_project.name = "proyects"
     entry_project._valid_items = all_orders
     entry_project.set_completion_list(all_orders)
-    entry_project.pack()
-    create_button = entry_project.create_button
-    create_button.config(text="Crear Carpetas")
-    create_button.config(command=lambda: on_submit(combo_clients, entry_project, project_type_var))
-    create_button.config(state=tk.DISABLED)
-    create_button.pack()
 
     # Opciones para el tipo de proyecto, con "SEGUIMIENTOS" seleccionado por defecto
     project_type_var = tk.StringVar(value="SEGUIMIENTOS")
     radio_project = tk.Radiobutton(root, text="Proyecto", variable=project_type_var, value="PROYECTOS")
-    radio_project.pack()
     radio_follow_up = tk.Radiobutton(root, text="Seguimiento", variable=project_type_var, value="SEGUIMIENTOS")
-    radio_follow_up.pack()
 
-    # # Botón para crear las carpetas
-    # create_button = AutocompleteCombobox(root).create_button
-    # create_button['state'] = tk.DISABLED
-    # create_button.pack()
+    # Botón para crear las carpetas
+    create_button = entry_project.create_button
+    create_button.config(text="Crear Carpetas")
+    create_button.config(command=lambda: on_submit(combo_clients, entry_project, project_type_var))
+    create_button.config(state=tk.DISABLED)
+
 
     def back():
         description_label.destroy()
@@ -462,8 +451,23 @@ def show_new_project_interface():
     label_result = tk.Label(root, text="")
     label_result.pack()
     back_button = tk.Button(root, text="Back", command=back)
-    back_button.pack(side="left")
+    back_button.pack(side="left", anchor="n")
 
+    description_label.pack()
+
+    label_client.pack()
+
+    combo_clients.pack()
+
+    label_project.pack()
+
+    entry_project.pack()
+
+    radio_follow_up.pack()
+
+    radio_project.pack()
+
+    create_button.pack()
 
 
 # Función para mostrar la interfaz de archivo de proyecto
@@ -472,7 +476,7 @@ def show_archive_project_interface():
     global logo  # Referencia a la variable global 'logo'
     try:
         logo = tk.PhotoImage(file=LOGO_PATH)
-        label_logo = tk.Label(root, image=logo, bg=background_color)
+        label_logo = tk.Label(root, image=logo, bg=background_color,height=220, width=1500)
         label_logo.pack(pady=10)  # Añade un poco de espacio vertical
     except Exception as e:
         messagebox.showerror("Error", f"No se pudo cargar el logo: {e}")
@@ -491,6 +495,8 @@ def show_archive_project_interface():
     global result_label
     result_label = tk.Label(root, text="", bg=background_color)
     result_label.pack(pady=5, padx=5)
+    back_button = tk.Button(root, text="Back", command=show_main_menu)
+    back_button.pack(side="left")
 
 def clear_interface():
     for widget in root.winfo_children():
