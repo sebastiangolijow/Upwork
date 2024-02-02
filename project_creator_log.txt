@@ -1,1 +1,3 @@
 INFO:root:Proyecto creado: Colores - test - SEGUIMIENTOS
+INFO:root:Proyecto creado: Colores - TEst - SEGUIMIENTOS
+INFO:root:Proyecto creado: Testing - Test Pro - PROYECTOS

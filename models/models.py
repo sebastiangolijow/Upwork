@@ -6,6 +6,8 @@ import tkinter as tk
 from tkinter import messagebox
 from tkinter import ttk
 
+from backup_scripts import start_backup
+
 
 # Rutas de las carpetas destino
 # BACKUP_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Pruebas/Enviar a Backup"
@@ -171,70 +173,7 @@ def on_submit(combo_clients, entry_project, project_type_var):
 
 
 #PARTE BACKUP______________________________
-def get_folder_size(path):
-    total_size = 0
-    for dirpath, dirnames, filenames in os.walk(path):
-        for f in filenames:
-            fp = os.path.join(dirpath, f)
-            if os.path.exists(fp):
-                total_size += os.path.getsize(fp)
-    return total_size / (1024 * 1024)  # Convertir a MB
 
-
-def move_project_to_backup_from_data(project_name):
-    data_moved_successfully = False
-    for project_type in ["PROYECTOS", "SEGUIMIENTOS"]:
-        for client in os.listdir(os.path.join(DATA_PATH, project_type)):
-            source_data = os.path.join(DATA_PATH, project_type, client, project_name)
-            if os.path.exists(source_data):
-                backup_data = os.path.join(BACKUP_PATH, project_type, client, project_name)
-                if not os.path.exists(backup_data):
-                    os.makedirs(os.path.dirname(backup_data), exist_ok=True)
-                    shutil.move(source_data, backup_data)
-                    print(f"Proyecto '{project_name}' movido a Backup desde DATA.")
-                    data_moved_successfully = True
-                else:
-                    print(f"El proyecto '{project_name}' ya existe en Backup (DATA).")
-                break  # Salir del bucle una vez que se encuentra el proyecto
-        if data_moved_successfully:
-            break  # Salir del bucle si se movió el proyecto con éxito
-
-    if data_moved_successfully:
-        messagebox.showinfo("Éxito", f"Proyecto '{project_name}' movido exitosamente a Backup desde DATA.")
-        return True
-    else:
-        messagebox.showerror("Error", f"No se encontró el proyecto '{project_name}' en DATA para mover a Backup.")
-        return False
-
-def move_editores_externos_to_backup(project_name):
-    for project_type in ["PROYECTOS", "SEGUIMIENTOS"]:
-        for client in os.listdir(os.path.join(EDITORES_EXTERNOS_PATH, project_type)):
-            source_folder = os.path.join(EDITORES_EXTERNOS_PATH, project_type, client, project_name, f"4. Ext. {project_name}")
-            if os.path.exists(source_folder):
-                backup_folder = os.path.join(BACKUP_PATH, project_type, client, project_name, f"4. Ext. {project_name}")
-                if not os.path.exists(backup_folder):
-                    os.makedirs(backup_folder, exist_ok=True)
-                    shutil.move(source_folder, backup_folder)
-                    print(f"Carpeta '4. Ext. {project_name}' movida a Backup desde EDITORES EXTERNOS.")
-                    return True
-                else:
-                    print(f"La carpeta '4. Ext. {project_name}' ya existe en Backup.")
-    print(f"No se encontró la carpeta '4. Ext. {project_name}' en EDITORES EXTERNOS.")
-    return False
-
-    # # Eliminar la carpeta de FILMMAKERS si es menor a 10MB
-    # filmmakers_path = os.path.join(FILMMAKERS_PATH, tipo, project_name)
-    # if os.path.exists(filmmakers_path) and get_folder_size(filmmakers_path) < 10:
-    #     try:
-    #         shutil.rmtree(filmmakers_path)
-    #         print(f"Carpeta de FILMMAKERS eliminada: {filmmakers_path}")
-    #     except Exception as e:
-    #         print(f"Error al eliminar carpeta de FILMMAKERS: {e}")
-
-    # if success:
-    #     messagebox.showinfo("Éxito", "Proyecto enviado a Backup exitosamente.")
-    # else:
-    #     messagebox.showerror("Error", "Ocurrió un error al enviar el proyecto a Backup.")
 
 
 def get_all_projects():
@@ -249,6 +188,10 @@ def get_all_projects():
 
 def search_project(project_name):
     projects = get_all_projects()
+    for project in get_all_projects():
+        if project_name in project:
+            print(project)
+
     if project_name in projects:
         result_label.config(text=f"Proyecto encontrado: {project_name}\nPreparado para enviar a Backup.")
         send_backup_button = tk.Button(root, text="Enviar a Backup", command=lambda: start_backup(project_name))
@@ -256,21 +199,6 @@ def search_project(project_name):
     else:
         result_label.config(text="Proyecto no encontrado.")
 
-
-
-
-def start_backup(project_name):
-    # Obtener tipo de proyecto y cliente
-    project_type, client_name = find_project_details(project_name)
-    if project_type and client_name:
-        # Iniciar transferencias paralelas
-        if move_project_to_backup_from_data(project_name):
-            if not move_editores_externos_to_backup(project_name):
-                messagebox.showerror("Error", "No se pudo mover la carpeta de EDITORES EXTERNOS.")
-        else:
-            messagebox.showerror("Error", "No se pudo mover la carpeta de DATA.")
-    else:
-        messagebox.showerror("Error", "No se pudo encontrar detalles del proyecto.")
 
 root = tk.Tk()
 background_color = "#1063FF"
