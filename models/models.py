@@ -6,7 +6,274 @@ import tkinter as tk
 from tkinter import messagebox
 from tkinter import ttk
 
+
+# Rutas de las carpetas destino
+# BACKUP_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Pruebas/Enviar a Backup"
+BACKUP_PATH = "./BACKUP"
+# DATA_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Pruebas/DATA"
+DATA_PATH = "./Pruebas/DATA"
+# EDITORES_EXTERNOS_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Pruebas/EDITORES EXTERNOS"
+EDITORES_EXTERNOS_PATH = "./Pruebas/EDITORES EXTERNOS"
+# FILMMAKERS_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Pruebas/FILMMAKERS"
+FILMMAKERS_PATH = "./Pruebas/FILMMAKERS"
+
+# CONNECT_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Pruebas/CONNECT"
+CONNECT_PATH = "./Pruebas/CONNECT"
+# PLANTILLA_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Plantillas carpetas para copiar"
+PLANTILLA_PATH = "./Plantillas carpetas para copiar"
+# LOGO_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Stpdn_Logos_Color en tamaño pequeño.png"
+LOGO_PATH = "./Stpdn_Logos_Color.png"
+
+logo = None
+
+
+
+def get_existing_clients():
+    def list_dirs(path):
+        return [d for d in os.listdir(path) if os.path.isdir(os.path.join(path, d))]
+
+    project_clients = set(list_dirs(os.path.join(DATA_PATH, "PROYECTOS")))
+    seguimiento_clients = set(list_dirs(os.path.join(DATA_PATH, "SEGUIMIENTOS")))
+    all_clients = project_clients.union(seguimiento_clients)
+    return sorted(list(all_clients))
+
+def get_all_orders(base_path):
+    all_orders = []
+
+    # Obtener todas las carpetas en la ruta base (proyectos o seguimiento)
+    for client in os.listdir(base_path):
+        client_path = os.path.join(base_path, client)
+
+        # Verificar si es un directorio
+        if os.path.isdir(client_path):
+            # Obtener todas las carpetas dentro del cliente (pedidos)
+            orders = [order for order in os.listdir(client_path) if os.path.isdir(os.path.join(client_path, order))]
+            all_orders.extend(orders)
+
+    return sorted(all_orders)
+
+### We could add some validation to see if the name of the project or client is available
+def validate_input(client_name, project_name):
+    # Validación de entradas del usuario
+    if not client_name.strip():
+        messagebox.showwarning("Advertencia", "El nombre del cliente no puede estar vacío.")
+        return False
+    if not project_name.strip():
+        messagebox.showwarning("Advertencia", "El nombre del proyecto no puede estar vacío.")
+        return False
+    print(f"Validación exitosa: cliente '{client_name}', proyecto '{project_name}'")
+    return True
+
+
+def copiar_estructura_data(tipo_proyecto, cliente, proyecto):
+    ruta_cliente = os.path.join(DATA_PATH, tipo_proyecto, cliente)
+    ruta_proyecto = os.path.join(ruta_cliente, proyecto)
+    plantilla_proyecto = os.path.join(PLANTILLA_PATH, "Nombre de Proyecto")
+    ruta_graphic = os.path.join(ruta_cliente, "0. Graphic")
+    plantilla_graphic = os.path.join(PLANTILLA_PATH, "0. Graphic")
+
+    # Crear directorio del cliente si no existe
+    if not os.path.exists(ruta_cliente):
+        os.makedirs(ruta_cliente)
+        print(f"Directorio del cliente creado en DATA: {ruta_cliente}")
+
+    # Verificar y copiar la carpeta "0. Graphic" si no existe
+    if not os.path.exists(ruta_graphic):
+        shutil.copytree(plantilla_graphic, ruta_graphic)
+        print(f"Carpeta '0. Graphic' copiada en DATA: {ruta_graphic}")
+        messagebox.showinfo("Éxito", f"La carpeta '0. Graphic' se ha copiado correctamente en el cliente '{cliente}'.")
+    else:
+        print(f"La carpeta '0. Graphic' ya existe en DATA: {ruta_graphic}")
+
+    # Copiar la estructura de la plantilla al proyecto si el proyecto no existe
+    if not os.path.exists(ruta_proyecto):
+        shutil.copytree(plantilla_proyecto, ruta_proyecto)
+        print(f"Estructura copiada a DATA ({tipo_proyecto}): {ruta_proyecto}")
+        messagebox.showinfo("Éxito", f"La estructura del proyecto '{proyecto}' en DATA ({tipo_proyecto}) se ha copiado correctamente.")
+    else:
+        print(f"El proyecto ya existe en DATA ({tipo_proyecto}): {ruta_proyecto}")
+        messagebox.showinfo("Información", "El proyecto ya existe en DATA y no se sobrescribirá.")
+
+def copiar_estructura_editores_externos(tipo_proyecto, cliente, proyecto):
+    ruta_cliente = os.path.join(EDITORES_EXTERNOS_PATH, tipo_proyecto, cliente)
+    plantilla = os.path.join(PLANTILLA_PATH, "EDITORES EXTERNOS", tipo_proyecto, "4. Ext. Nombre Proyecto")
+    ruta_proyecto = os.path.join(ruta_cliente, proyecto, f"4. Ext. {proyecto}")  # Añadido un nivel adicional
+
+    if not os.path.exists(ruta_cliente):
+        os.makedirs(ruta_cliente)
+        print(f"Directorio del cliente creado en EDITORES EXTERNOS: {ruta_cliente}")
+
+    if not os.path.exists(ruta_proyecto):
+        shutil.copytree(plantilla, ruta_proyecto)
+        print(f"Estructura copiada y renombrada en EDITORES EXTERNOS ({tipo_proyecto}): {ruta_proyecto}")
+        messagebox.showinfo("Éxito", f"La estructura del proyecto '{proyecto}' en EDITORES EXTERNOS ({tipo_proyecto}) se ha copiado y renombrado correctamente.")
+    else:
+        print(f"El proyecto ya existe en EDITORES EXTERNOS ({tipo_proyecto}): {ruta_proyecto}")
+        messagebox.showinfo("Información", "El proyecto ya existe en EDITORES EXTERNOS y no se sobrescribirá.")
+
+def copiar_estructura_filmmakers(tipo_proyecto, cliente, proyecto):
+    ruta_cliente = os.path.join(FILMMAKERS_PATH, tipo_proyecto, cliente)
+    plantilla = os.path.join(PLANTILLA_PATH, "FILMMAKERS", "Nombre de Proyecto")
+    ruta_proyecto = os.path.join(ruta_cliente, proyecto)
+
+    if not os.path.exists(ruta_cliente):
+        os.makedirs(ruta_cliente)
+        print(f"Directorio del cliente creado en FILMMAKERS: {ruta_cliente}")
+
+    if not os.path.exists(ruta_proyecto):
+        shutil.copytree(plantilla, ruta_proyecto)
+        print(f"Estructura copiada en FILMMAKERS ({tipo_proyecto}): {ruta_proyecto}")
+        messagebox.showinfo("Éxito", f"La estructura del proyecto '{proyecto}' en FILMMAKERS ({tipo_proyecto}) se ha copiado correctamente.")
+    else:
+        print(f"El proyecto ya existe en FILMMAKERS ({tipo_proyecto}): {ruta_proyecto}")
+        messagebox.showinfo("Información", "El proyecto ya existe en FILMMAKERS y no se sobrescribirá.")
+
+def copiar_estructura_connect(cliente, proyecto):
+    ruta_cliente = os.path.join(CONNECT_PATH, cliente)
+    plantilla_proyecto = os.path.join(PLANTILLA_PATH, "CONNECT", "Nombre de Proyecto")
+    ruta_proyecto = os.path.join(ruta_cliente, proyecto)
+
+    # Crear directorio del cliente si no existe
+    if not os.path.exists(ruta_cliente):
+        os.makedirs(ruta_cliente)
+        print(f"Directorio del cliente creado en CONNECT: {ruta_cliente}")
+
+    # Copiar la estructura de la plantilla al proyecto si el proyecto no existe
+    if not os.path.exists(ruta_proyecto):
+        shutil.copytree(plantilla_proyecto, ruta_proyecto)
+        print(f"Estructura copiada en CONNECT: {ruta_proyecto}")
+        messagebox.showinfo("Éxito", f"La estructura del proyecto '{proyecto}' en CONNECT se ha copiado correctamente.")
+    else:
+        print(f"El proyecto ya existe en CONNECT: {ruta_proyecto}")
+        messagebox.showinfo("Información", "El proyecto ya existe en CONNECT y no se sobrescribirá.")
+
+def log_activity(message):
+    # Registro de actividades
+    logging.basicConfig(filename="project_creator_log.txt", level=logging.INFO)
+    logging.info(message)
+
+def on_submit(combo_clients, entry_project, project_type_var):
+    client_name = combo_clients.get()
+    project_name = entry_project.get()
+    project_type = project_type_var.get()
+
+    if not validate_input(client_name, project_name):
+        return
+
+    copiar_estructura_data(project_type, client_name, project_name)
+    copiar_estructura_editores_externos(project_type, client_name, project_name)
+    copiar_estructura_filmmakers(project_type, client_name, project_name)
+    copiar_estructura_connect(client_name, project_name)
+
+    log_activity(f"Proyecto creado: {client_name} - {project_name} - {project_type}")
+
+
+
+
+#PARTE BACKUP______________________________
+def get_folder_size(path):
+    total_size = 0
+    for dirpath, dirnames, filenames in os.walk(path):
+        for f in filenames:
+            fp = os.path.join(dirpath, f)
+            if os.path.exists(fp):
+                total_size += os.path.getsize(fp)
+    return total_size / (1024 * 1024)  # Convertir a MB
+
+
+def move_project_to_backup_from_data(project_name):
+    data_moved_successfully = False
+    for project_type in ["PROYECTOS", "SEGUIMIENTOS"]:
+        for client in os.listdir(os.path.join(DATA_PATH, project_type)):
+            source_data = os.path.join(DATA_PATH, project_type, client, project_name)
+            if os.path.exists(source_data):
+                backup_data = os.path.join(BACKUP_PATH, project_type, client, project_name)
+                if not os.path.exists(backup_data):
+                    os.makedirs(os.path.dirname(backup_data), exist_ok=True)
+                    shutil.move(source_data, backup_data)
+                    print(f"Proyecto '{project_name}' movido a Backup desde DATA.")
+                    data_moved_successfully = True
+                else:
+                    print(f"El proyecto '{project_name}' ya existe en Backup (DATA).")
+                break  # Salir del bucle una vez que se encuentra el proyecto
+        if data_moved_successfully:
+            break  # Salir del bucle si se movió el proyecto con éxito
+
+    if data_moved_successfully:
+        messagebox.showinfo("Éxito", f"Proyecto '{project_name}' movido exitosamente a Backup desde DATA.")
+        return True
+    else:
+        messagebox.showerror("Error", f"No se encontró el proyecto '{project_name}' en DATA para mover a Backup.")
+        return False
+
+def move_editores_externos_to_backup(project_name):
+    for project_type in ["PROYECTOS", "SEGUIMIENTOS"]:
+        for client in os.listdir(os.path.join(EDITORES_EXTERNOS_PATH, project_type)):
+            source_folder = os.path.join(EDITORES_EXTERNOS_PATH, project_type, client, project_name, f"4. Ext. {project_name}")
+            if os.path.exists(source_folder):
+                backup_folder = os.path.join(BACKUP_PATH, project_type, client, project_name, f"4. Ext. {project_name}")
+                if not os.path.exists(backup_folder):
+                    os.makedirs(backup_folder, exist_ok=True)
+                    shutil.move(source_folder, backup_folder)
+                    print(f"Carpeta '4. Ext. {project_name}' movida a Backup desde EDITORES EXTERNOS.")
+                    return True
+                else:
+                    print(f"La carpeta '4. Ext. {project_name}' ya existe en Backup.")
+    print(f"No se encontró la carpeta '4. Ext. {project_name}' en EDITORES EXTERNOS.")
+    return False
+
+    # # Eliminar la carpeta de FILMMAKERS si es menor a 10MB
+    # filmmakers_path = os.path.join(FILMMAKERS_PATH, tipo, project_name)
+    # if os.path.exists(filmmakers_path) and get_folder_size(filmmakers_path) < 10:
+    #     try:
+    #         shutil.rmtree(filmmakers_path)
+    #         print(f"Carpeta de FILMMAKERS eliminada: {filmmakers_path}")
+    #     except Exception as e:
+    #         print(f"Error al eliminar carpeta de FILMMAKERS: {e}")
+
+    # if success:
+    #     messagebox.showinfo("Éxito", "Proyecto enviado a Backup exitosamente.")
+    # else:
+    #     messagebox.showerror("Error", "Ocurrió un error al enviar el proyecto a Backup.")
+
+
+def get_all_projects():
+    projects = []
+    for tipo in ["PROYECTOS", "SEGUIMIENTOS"]:
+        project_path = os.path.join(DATA_PATH, tipo)
+        for client in os.listdir(project_path):
+            client_path = os.path.join(project_path, client)
+            if os.path.isdir(client_path):
+                projects.extend(os.listdir(client_path))
+    return sorted(set(projects))
+
+def search_project(project_name):
+    projects = get_all_projects()
+    if project_name in projects:
+        result_label.config(text=f"Proyecto encontrado: {project_name}\nPreparado para enviar a Backup.")
+        send_backup_button = tk.Button(root, text="Enviar a Backup", command=lambda: start_backup(project_name))
+        send_backup_button.pack(pady=5, padx=5)
+    else:
+        result_label.config(text="Proyecto no encontrado.")
+
+
+
+
+def start_backup(project_name):
+    # Obtener tipo de proyecto y cliente
+    project_type, client_name = find_project_details(project_name)
+    if project_type and client_name:
+        # Iniciar transferencias paralelas
+        if move_project_to_backup_from_data(project_name):
+            if not move_editores_externos_to_backup(project_name):
+                messagebox.showerror("Error", "No se pudo mover la carpeta de EDITORES EXTERNOS.")
+        else:
+            messagebox.showerror("Error", "No se pudo mover la carpeta de DATA.")
+    else:
+        messagebox.showerror("Error", "No se pudo encontrar detalles del proyecto.")
+
 root = tk.Tk()
+background_color = "#1063FF"
 
 class AutocompleteCombobox(ttk.Combobox):
     shared_valid_client = False
@@ -77,3 +344,152 @@ class AutocompleteCombobox(ttk.Combobox):
         if not self.get():
             return False
 
+
+class CreateOrderApp:
+    def __init__(self) -> None:
+        # Menú inicial para elegir la acción a realizar
+        self.menu_frame = tk.Frame(root)
+        self.menu_frame.pack()
+
+        self.new_project_button = tk.Button(self.menu_frame, text="Crear Nuevo Proyecto", command=self.show_new_project_interface)
+        self.new_project_button.pack(side=tk.LEFT)
+
+        self.archive_project_button = tk.Button(self.menu_frame, text="Proyecto Terminado, enviar a Backup", command=self.show_archive_project_interface)
+        self.archive_project_button.pack(side=tk.LEFT)
+
+    def show_main_menu(self):
+        self.clear_interface()
+
+        # Añadir el logo de Stupendastic al menú principal
+        try:
+            global logo
+            logo = tk.PhotoImage(file=LOGO_PATH)
+            label_logo = tk.Label(root, image=logo,height=220, width=1500)
+            label_logo.pack(pady=10)  # Añade un poco de espacio vertical (pady) alrededor del logo
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo cargar el logo: {e}")
+
+        # Botones del menú principal
+        quit_button = tk.Button(root, text="X", command=root.destroy)
+        quit_button.pack(side="right", anchor="n")
+        new_project_button = tk.Button(root, text="Crear Nuevo Proyecto", command=self.show_new_project_interface)
+        new_project_button.pack(pady=10)
+
+        archive_project_button = tk.Button(root, text="Proyecto Terminado, enviar a Backup", command=self.show_archive_project_interface)
+        archive_project_button.pack(pady=10)
+
+    def show_new_project_interface(self):
+        global logo  # Referencia a la variable global 'logo'
+        self.clear_interface()
+        # Añadir el logo de Stupendastic
+        try:
+            # Asegúrate de que la ruta al archivo del logo es accesible y correcta
+            logo = tk.PhotoImage(file=LOGO_PATH)
+            label_logo = tk.Label(root, image=logo,height=220, width=1500)
+            label_logo.pack()
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo cargar el logo: {e}")
+
+
+
+        # Descripción del script
+        description_label = tk.Label(root, text="\nEste Script creará carpetas en las siguientes ubicaciones:\nDATA, EDITORES EXTERNOS, FILMMAKERS, CONNECT\n")
+
+        # Añadir menú desplegable con función de autocompletar para el nombre del cliente
+        label_client = tk.Label(root, text="Nombre del Cliente:")
+        combo_clients = AutocompleteCombobox(root)
+        combo_clients.name = "clients"
+        combo_clients._valid_items = get_existing_clients()
+        combo_clients.set_completion_list(get_existing_clients())
+
+        # Añadir entrada para el nombre del proyecto
+        proyectos_path = "./Pruebas/DATA/PROYECTOS"
+        proyectos_orders = get_all_orders(proyectos_path)
+        seguimiento_path = "./Pruebas/DATA/SEGUIMIENTOS"
+        seguimiento_orders = get_all_orders(seguimiento_path)
+        all_orders = proyectos_orders + seguimiento_orders
+
+        label_project = tk.Label(root, text="Nombre del Proyecto:")
+        entry_project = AutocompleteCombobox(root)
+        entry_project.name = "proyects"
+        entry_project._valid_items = all_orders
+        entry_project.set_completion_list(all_orders)
+
+        # Opciones para el tipo de proyecto, con "SEGUIMIENTOS" seleccionado por defecto
+        project_type_var = tk.StringVar(value="SEGUIMIENTOS")
+        radio_project = tk.Radiobutton(root, text="Proyecto", variable=project_type_var, value="PROYECTOS")
+        radio_follow_up = tk.Radiobutton(root, text="Seguimiento", variable=project_type_var, value="SEGUIMIENTOS")
+
+        # Botón para crear las carpetas
+        create_button = entry_project.create_button
+        create_button.config(text="Crear Carpetas")
+        create_button.config(command=lambda: on_submit(combo_clients, entry_project, project_type_var))
+        create_button.config(state=tk.DISABLED)
+
+
+        def back():
+            description_label.destroy()
+            label_client.destroy()
+            combo_clients.destroy()
+            label_project.destroy()
+            entry_project.destroy()
+            create_button.destroy()
+            radio_follow_up.destroy()
+            radio_project.destroy()
+            label_result.destroy()
+            self.show_main_menu()
+
+        # Etiqueta para mostrar el resultado de la operación
+        label_result = tk.Label(root, text="")
+        label_result.pack()
+        back_button = tk.Button(root, text="Back", command=back)
+        back_button.pack(side="left", anchor="n")
+
+        description_label.pack()
+
+        label_client.pack()
+
+        combo_clients.pack()
+
+        label_project.pack()
+
+        entry_project.pack()
+
+        radio_follow_up.pack()
+
+        radio_project.pack()
+
+        create_button.pack()
+
+
+    # Función para mostrar la interfaz de archivo de proyecto
+    def show_archive_project_interface(self):
+        self.clear_interface()
+        global logo  # Referencia a la variable global 'logo'
+        try:
+            logo = tk.PhotoImage(file=LOGO_PATH)
+            label_logo = tk.Label(root, image=logo, bg=background_color,height=220, width=1500)
+            label_logo.pack(pady=10)  # Añade un poco de espacio vertical
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo cargar el logo: {e}")
+
+        # Campo de búsqueda
+        search_label = tk.Label(root, text="Nombre del Proyecto a Archivar:", bg=background_color)
+        search_label.pack(pady=5, padx=5)
+        search_entry = tk.Entry(root)
+        search_entry.pack(pady=5, padx=5)
+
+        # Botón de búsqueda
+        search_button = tk.Button(root, text="Buscar Proyecto", command=lambda: search_project(search_entry.get()))
+        search_button.pack(pady=5, padx=5)
+
+        # Resultados de búsqueda
+        global result_label
+        result_label = tk.Label(root, text="", bg=background_color)
+        result_label.pack(pady=5, padx=5)
+        back_button = tk.Button(root, text="Back", command=self.show_main_menu)
+        back_button.pack(side="left")
+
+    def clear_interface(self):
+        for widget in root.winfo_children():
+            widget.destroy()
