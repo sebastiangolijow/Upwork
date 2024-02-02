@@ -11,36 +11,6 @@ LOGO_PATH = "./Stpdn_Logos_Color.png"
 DATA_PATH = "./Pruebas/DATA"
 PLANTILLA_PATH = "./Plantillas carpetas para copiar"
 
-
-def copiar_estructura_data(tipo_proyecto, cliente, proyecto):
-    ruta_cliente = os.path.join(DATA_PATH, tipo_proyecto, cliente)
-    ruta_proyecto = os.path.join(ruta_cliente, proyecto)
-    plantilla_proyecto = os.path.join(PLANTILLA_PATH, "Nombre de Proyecto")
-    ruta_graphic = os.path.join(ruta_cliente, "0. Graphic")
-    plantilla_graphic = os.path.join(PLANTILLA_PATH, "0. Graphic")
-
-    # Crear directorio del cliente si no existe
-    if not os.path.exists(ruta_cliente):
-        os.makedirs(ruta_cliente)
-        print(f"Directorio del cliente creado en DATA: {ruta_cliente}")
-
-    # Verificar y copiar la carpeta "0. Graphic" si no existe
-    if not os.path.exists(ruta_graphic):
-        shutil.copytree(plantilla_graphic, ruta_graphic)
-        print(f"Carpeta '0. Graphic' copiada en DATA: {ruta_graphic}")
-        messagebox.showinfo("Éxito", f"La carpeta '0. Graphic' se ha copiado correctamente en el cliente '{cliente}'.")
-    else:
-        print(f"La carpeta '0. Graphic' ya existe en DATA: {ruta_graphic}")
-
-    # Copiar la estructura de la plantilla al proyecto si el proyecto no existe
-    if not os.path.exists(ruta_proyecto):
-        shutil.copytree(plantilla_proyecto, ruta_proyecto)
-        print(f"Estructura copiada a DATA ({tipo_proyecto}): {ruta_proyecto}")
-        messagebox.showinfo("Éxito", f"La estructura del proyecto '{proyecto}' en DATA ({tipo_proyecto}) se ha copiado correctamente.")
-    else:
-        print(f"El proyecto ya existe en DATA ({tipo_proyecto}): {ruta_proyecto}")
-        messagebox.showinfo("Información", "El proyecto ya existe en DATA y no se sobrescribirá.")
-
 def get_folder_size(path):
     total_size = 0
     for dirpath, dirnames, filenames in os.walk(path):
