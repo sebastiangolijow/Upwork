@@ -99,15 +99,9 @@ class AutocompleteCombobox(ttk.Combobox):
         if self.get():
             if self.name == "proyects":
                 AutocompleteCombobox.shared_valid_project = True
-                print(AutocompleteCombobox.shared_valid_project)
             else:
                 AutocompleteCombobox.shared_valid_client = True
-                print(AutocompleteCombobox.shared_valid_client)
-
-        print(AutocompleteCombobox.shared_valid_client, AutocompleteCombobox.shared_valid_project)
-
         if AutocompleteCombobox.shared_valid_client and AutocompleteCombobox.shared_valid_project:
-            print('hereererererer')
             self.create_button.config(state=tk.NORMAL)
         if not self.get():
             return False
@@ -368,6 +362,7 @@ root.geometry("700x600")  # Puedes ajustar el tamaño según tus necesidades
 background_color = "#1063FF"
 #root.configure(bg=background_color)
 
+
 def show_main_menu():
     clear_interface()
 
@@ -381,17 +376,19 @@ def show_main_menu():
         messagebox.showerror("Error", f"No se pudo cargar el logo: {e}")
 
     # Botones del menú principal
+    quit_button = tk.Button(root, text="X", command=root.destroy)
+    quit_button.pack(side="right")
     new_project_button = tk.Button(root, text="Crear Nuevo Proyecto", command=show_new_project_interface)
     new_project_button.pack(pady=10)
 
     archive_project_button = tk.Button(root, text="Proyecto Terminado, enviar a Backup", command=show_archive_project_interface)
     archive_project_button.pack(pady=10)
 
-
-
 def show_new_project_interface():
     global logo  # Referencia a la variable global 'logo'
     clear_interface()
+    quit_button = tk.Button(root, text="X", command=root.destroy)
+    quit_button.pack(side="right")
 
     # Añadir el logo de Stupendastic
     try:
@@ -449,9 +446,23 @@ def show_new_project_interface():
     # create_button['state'] = tk.DISABLED
     # create_button.pack()
 
+    def back():
+        description_label.destroy()
+        label_client.destroy()
+        combo_clients.destroy()
+        label_project.destroy()
+        entry_project.destroy()
+        create_button.destroy()
+        radio_follow_up.destroy()
+        radio_project.destroy()
+        label_result.destroy()
+        show_main_menu()
+
     # Etiqueta para mostrar el resultado de la operación
     label_result = tk.Label(root, text="")
     label_result.pack()
+    back_button = tk.Button(root, text="Back", command=back)
+    back_button.pack(side="left")
 
 
 
