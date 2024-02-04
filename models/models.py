@@ -5,7 +5,7 @@ import time
 import tkinter as tk
 from tkinter import messagebox
 from tkinter import ttk
-
+from datetime import datetime
 from backup_scripts import start_backup
 
 
@@ -173,8 +173,23 @@ def on_submit(combo_clients, entry_project, project_type_var):
 
 
 #PARTE BACKUP______________________________
+def get_all_project_paths():
+    project_paths = []
+    for tipo in ["PROYECTOS", "SEGUIMIENTOS"]:
+        project_path = os.path.join(DATA_PATH, tipo)
+        for client in os.listdir(project_path):
+            client_path = os.path.join(project_path, client)
+            if os.path.isdir(client_path):
+                projects = os.listdir(client_path)
+                project_paths.extend(os.path.join(client_path, project) for project in projects)
+    return sorted(set(project_paths))
 
-
+def delete_folder(path):
+    try:
+        shutil.rmtree(path)
+        print(f"Folder '{path}' successfully deleted.")
+    except Exception as e:
+        print(f"Error deleting folder '{path}': {e}")
 
 def get_all_projects():
     projects = []
@@ -186,19 +201,53 @@ def get_all_projects():
                 projects.extend(os.listdir(client_path))
     return sorted(set(projects))
 
+def folder_info(path, project_name):
+    total_weight = 0
+    last_modified_date = None
+    has_empty_folders = False
+
+    for dirpath, dirnames, filenames in os.walk(path):
+        # Calculate total weight
+        for filename in filenames:
+            file_path = os.path.join(dirpath, filename)
+            total_weight += os.path.getsize(file_path)
+
+        if not filenames:
+            has_empty_folders = True
+
+        # Check last modified date
+        if not has_empty_folders:
+            current_last_modified = max(os.path.getmtime(os.path.join(dirpath, name)) for name in dirnames + filenames)
+            last_modified_date = max(last_modified_date, datetime.fromtimestamp(current_last_modified))
+        else:
+            result_label.config(text= f"All folders inside {project_name} are empty, do you want to delete it ?")
+            delete_proyect_button = tk.Button(root, text="Delete", command=lambda: delete_folder(path))
+            delete_proyect_button.pack()
+            return "all folders are empty"
+        # Check for empty folders
+
+    return {
+        "total_weight_mb": total_weight / (1024 * 1024),  # Convert to megabytes
+        "last_modified_date": last_modified_date,
+        "has_empty_folders": has_empty_folders
+    }
+
 def search_project(project_name):
     projects = get_all_projects()
-    for project in get_all_projects():
-        if project_name in project:
-            print(project)
+    project_path_f = ""
+    for project_path in get_all_project_paths():
+        if project_name in project_path:
+            project_path_f = project_path
+            folder_data = folder_info(project_path_f, project_name)
+            print("test: ", folder_data)
 
-    if project_name in projects:
+    if project_name in projects and folder_data != "all folders are empty":
         result_label.config(text=f"Proyecto encontrado: {project_name}\nPreparado para enviar a Backup.")
+        result_path.config(text=f"{project_path_f}")
         send_backup_button = tk.Button(root, text="Enviar a Backup", command=lambda: start_backup(project_name))
         send_backup_button.pack(pady=5, padx=5)
-    else:
+    if  project_name not in projects:
         result_label.config(text="Proyecto no encontrado.")
-
 
 root = tk.Tk()
 background_color = "#1063FF"
@@ -401,10 +450,18 @@ class CreateOrderApp:
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo cargar el logo: {e}")
 
+        proyectos_path = "./Pruebas/DATA/PROYECTOS"
+        proyectos_orders = get_all_orders(proyectos_path)
+        seguimiento_path = "./Pruebas/DATA/SEGUIMIENTOS"
+        seguimiento_orders = get_all_orders(seguimiento_path)
+        all_orders = proyectos_orders + seguimiento_orders
+
         # Campo de búsqueda
         search_label = tk.Label(root, text="Nombre del Proyecto a Archivar:", bg=background_color)
         search_label.pack(pady=5, padx=5)
-        search_entry = tk.Entry(root)
+        search_entry = AutocompleteCombobox(root)
+        search_entry._valid_items = all_orders
+        search_entry.set_completion_list(all_orders)
         search_entry.pack(pady=5, padx=5)
 
         # Botón de búsqueda
@@ -413,8 +470,11 @@ class CreateOrderApp:
 
         # Resultados de búsqueda
         global result_label
+        global result_path
         result_label = tk.Label(root, text="", bg=background_color)
+        result_path = tk.Label(root, text="", bg=background_color)
         result_label.pack(pady=5, padx=5)
+        result_path.pack(pady=5, padx=5)
         back_button = tk.Button(root, text="Back", command=self.show_main_menu)
         back_button.pack(side="left")
 
