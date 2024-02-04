@@ -3,17 +3,19 @@ import os
 import shutil
 import time
 import tkinter as tk
+from datetime import datetime
 from tkinter import messagebox
 from tkinter import ttk
-from datetime import datetime
+
 from backup_scripts import start_backup
+from my_scripts.track_and_delete_proyects import calculate_folder_size
 
 
 # Rutas de las carpetas destino
 # BACKUP_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Pruebas/Enviar a Backup"
 BACKUP_PATH = "./BACKUP"
 # DATA_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Pruebas/DATA"
-DATA_PATH = "./Pruebas/DATA"
+DATA_PATH = "./DATA"
 # EDITORES_EXTERNOS_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Pruebas/EDITORES EXTERNOS"
 EDITORES_EXTERNOS_PATH = "./Pruebas/EDITORES EXTERNOS"
 # FILMMAKERS_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Pruebas/FILMMAKERS"
@@ -28,6 +30,47 @@ LOGO_PATH = "./Stpdn_Logos_Color.png"
 
 logo = None
 
+
+
+class TableClass:
+    def __init__(self, root):
+        self.root = root
+
+    def create_data_table(self, data):
+        # Create a Treeview widget
+        tree = ttk.Treeview(self.root, columns=list(data[0].keys()), show="headings")
+
+        # Add columns to the Treeview
+        for column in data[0].keys():
+            tree.heading(column, text=column)
+            tree.column(column, anchor=tk.CENTER)
+
+        # Add data to the Treeview
+        for item in data:
+            values = [item[column] for column in data[0].keys()] + ["Delete"]
+            tree.insert("", tk.END, values=values, tags=(item["project_path"],))
+
+        # Add a vertical scrollbar
+        scrollbar = ttk.Scrollbar(self.root, orient="vertical", command=tree.yview)
+        tree.configure(yscrollcommand=scrollbar.set)
+
+        # Pack the Treeview and scrollbar
+        tree.pack(expand=True, fill=tk.BOTH, side="left")
+        scrollbar.pack(side="right", fill=tk.Y, padx=(0, 10))
+
+        # Add a custom delete button to each row
+        for item in data:
+            delete_button = ttk.Button(self.root, text="Delete", command=lambda path=item["project_path"]: self.delete_project(path))
+            tree.tag_bind(item["project_path"], '<ButtonRelease-1>', lambda event, path=item["project_path"]: self.delete_project(path))
+            tree.tag_configure(item["project_path"], background='white', text='delete')  # Set the background color
+
+            # Get the screen coordinates for the item
+            x, y, _, _ = tree.bbox(item["project_path"], column="#1")
+            delete_button.place(x=x + 200, y=y)
+
+    def delete_project(self, project_path):
+        # Implement the logic to delete the project using the project_path
+        print(f"Deleting project at path: {project_path}")
 
 
 def get_existing_clients():
@@ -201,36 +244,47 @@ def get_all_projects():
                 projects.extend(os.listdir(client_path))
     return sorted(set(projects))
 
-def folder_info(path, project_name):
-    total_weight = 0
-    last_modified_date = None
-    has_empty_folders = False
 
-    for dirpath, dirnames, filenames in os.walk(path):
-        # Calculate total weight
-        for filename in filenames:
-            file_path = os.path.join(dirpath, filename)
-            total_weight += os.path.getsize(file_path)
+def folder_info_recursive(path, project_name):
+    folders_info = []
+    def check_folder(folder_path):
+        files = []
+        for entry in os.listdir(folder_path):
+            entry_path = os.path.join(folder_path, entry)
+            if os.path.isfile(entry_path):
+                files.append(entry_path.lower())
 
-        if not filenames:
-            has_empty_folders = True
+        is_empty = len(files) == 0
+        file_count = len([file for file in files if file.endswith(('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.mp4', '.avi', '.mkv', '.mp3'))])
 
-        # Check last modified date
-        if not has_empty_folders:
-            current_last_modified = max(os.path.getmtime(os.path.join(dirpath, name)) for name in dirnames + filenames)
-            last_modified_date = max(last_modified_date, datetime.fromtimestamp(current_last_modified))
-        else:
-            result_label.config(text= f"All folders inside {project_name} are empty, do you want to delete it ?")
-            delete_proyect_button = tk.Button(root, text="Delete", command=lambda: delete_folder(path))
-            delete_proyect_button.pack()
-            return "all folders are empty"
-        # Check for empty folders
+        # Get the last modified date of the folder
+        try:
+            last_modified_date = datetime.fromtimestamp(os.path.getmtime(folder_path))
+        except OSError:
+            last_modified_date = None
+        return {'folder_name': os.path.relpath(folder_path, path), 'is_empty': is_empty, 'file_count': file_count, 'last_modified_date': last_modified_date, 'project_path': folder_path}
 
-    return {
-        "total_weight_mb": total_weight / (1024 * 1024),  # Convert to megabytes
-        "last_modified_date": last_modified_date,
-        "has_empty_folders": has_empty_folders
-    }
+    def traverse_folder(current_path):
+        for entry in os.listdir(current_path):
+            entry_path = os.path.join(current_path, entry)
+            if os.path.isdir(entry_path):
+                folders_info.append(check_folder(entry_path))
+                traverse_folder(entry_path)
+
+    traverse_folder(path)
+
+    has_files = any(folder['file_count'] > 0 for folder in folders_info)
+    if not has_files:
+        result_label.config(text= f"All folders inside {project_name} are empty, do you want to delete it ?")
+        delete_proyect_button = tk.Button(root, text="Delete", command=lambda: delete_folder(path))
+        delete_proyect_button.pack()
+        return "all folders are empty"
+    else:
+        # delete_proyect_button.pack_forget()
+        my_instance = TableClass(root)
+        my_instance.create_data_table(folders_info)
+
+    return folders_info
 
 def search_project(project_name):
     projects = get_all_projects()
@@ -238,9 +292,7 @@ def search_project(project_name):
     for project_path in get_all_project_paths():
         if project_name in project_path:
             project_path_f = project_path
-            folder_data = folder_info(project_path_f, project_name)
-            print("test: ", folder_data)
-
+            folder_data = folder_info_recursive(project_path_f, project_name)
     if project_name in projects and folder_data != "all folders are empty":
         result_label.config(text=f"Proyecto encontrado: {project_name}\nPreparado para enviar a Backup.")
         result_path.config(text=f"{project_path_f}")
@@ -471,12 +523,12 @@ class CreateOrderApp:
         # Resultados de búsqueda
         global result_label
         global result_path
+        back_button = tk.Button(root, text="Back", command=self.show_main_menu)
+        back_button.pack(side="left", anchor="n")
         result_label = tk.Label(root, text="", bg=background_color)
         result_path = tk.Label(root, text="", bg=background_color)
         result_label.pack(pady=5, padx=5)
         result_path.pack(pady=5, padx=5)
-        back_button = tk.Button(root, text="Back", command=self.show_main_menu)
-        back_button.pack(side="left")
 
     def clear_interface(self):
         for widget in root.winfo_children():
