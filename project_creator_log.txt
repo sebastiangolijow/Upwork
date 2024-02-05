@@ -1,3 +1,6 @@
 INFO:root:Proyecto creado: Colores - test - SEGUIMIENTOS
 INFO:root:Proyecto creado: Colores - TEst - SEGUIMIENTOS
 INFO:root:Proyecto creado: Testing - Test Pro - PROYECTOS
+INFO:root:Proyecto creado: AEDAS Homes - Test - PROYECTOS
+INFO:root:Proyecto creado: AEDAS Homes - Testing - PROYECTOS
+INFO:root:Proyecto creado: AEDAS - Testsss - SEGUIMIENTOS

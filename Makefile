@@ -1,3 +1,3 @@
-.PHONY: local-arm
-local-arm: ## Starts dev environment for arm (silicone) chips
+.PHONY: proyect-start
+proyect-start:
 	python3 main.py

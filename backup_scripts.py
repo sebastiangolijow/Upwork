@@ -4,11 +4,11 @@ from tkinter import messagebox
 
 
 BACKUP_PATH = "./BACKUP"
-EDITORES_EXTERNOS_PATH = "./Pruebas/EDITORES EXTERNOS"
-FILMMAKERS_PATH = "./Pruebas/FILMMAKERS"
-CONNECT_PATH = "./Pruebas/CONNECT"
+EDITORES_EXTERNOS_PATH = "./EDITORES EXTERNOS"
+FILMMAKERS_PATH = "./FILMMAKERS"
+CONNECT_PATH = "./CONNECT"
 LOGO_PATH = "./Stpdn_Logos_Color.png"
-DATA_PATH = "./Pruebas/DATA"
+DATA_PATH = "./DATA"
 PLANTILLA_PATH = "./Plantillas carpetas para copiar"
 
 def get_folder_size(path):
@@ -76,9 +76,8 @@ def move_editores_externos_to_backup(project_name):
     # else:
     #     messagebox.showerror("Error", "Ocurrió un error al enviar el proyecto a Backup.")
 
-def start_backup(project_name):
+def start_backup(project_type, client_name, project_name):
     # Obtener tipo de proyecto y cliente
-    project_type, client_name = find_project_details(project_name)
     if project_type and client_name:
         # Iniciar transferencias paralelas
         if move_project_to_backup_from_data(project_name):

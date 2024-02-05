@@ -8,7 +8,6 @@ from tkinter import messagebox
 from tkinter import ttk
 
 from backup_scripts import start_backup
-from my_scripts.track_and_delete_proyects import calculate_folder_size
 
 
 # Rutas de las carpetas destino
@@ -17,12 +16,12 @@ BACKUP_PATH = "./BACKUP"
 # DATA_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Pruebas/DATA"
 DATA_PATH = "./DATA"
 # EDITORES_EXTERNOS_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Pruebas/EDITORES EXTERNOS"
-EDITORES_EXTERNOS_PATH = "./Pruebas/EDITORES EXTERNOS"
+EDITORES_EXTERNOS_PATH = "./EDITORES EXTERNOS"
 # FILMMAKERS_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Pruebas/FILMMAKERS"
-FILMMAKERS_PATH = "./Pruebas/FILMMAKERS"
+FILMMAKERS_PATH = "./FILMMAKERS"
 
 # CONNECT_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Pruebas/CONNECT"
-CONNECT_PATH = "./Pruebas/CONNECT"
+CONNECT_PATH = "./CONNECT"
 # PLANTILLA_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Plantillas carpetas para copiar"
 PLANTILLA_PATH = "./Plantillas carpetas para copiar"
 # LOGO_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Stpdn_Logos_Color en tamaño pequeño.png"
@@ -35,11 +34,11 @@ logo = None
 class TableClass:
     def __init__(self, root):
         self.root = root
+        self.table_displayed = False
 
     def create_data_table(self, data):
         # Create a Treeview widget
         tree = ttk.Treeview(self.root, columns=list(data[0].keys()), show="headings")
-
         # Add columns to the Treeview
         for column in data[0].keys():
             tree.heading(column, text=column)
@@ -47,8 +46,23 @@ class TableClass:
 
         # Add data to the Treeview
         for item in data:
-            values = [item[column] for column in data[0].keys()] + ["Delete"]
-            tree.insert("", tk.END, values=values, tags=(item["project_path"],))
+            # Replace the 'project_path' column with the 'Delete' button
+            values = [item[column] for column in data[0].keys() if column != "project_path"] + ["Delete"]
+            # Use the item["project_path"] as the item identifier
+            item_id = tree.insert("", tk.END, values=(values), tags=(item["project_path"],))
+
+            # Add a custom delete button to each row in the last column
+            delete_button = ttk.Button(self.root, text="Delete", command=lambda path=item["project_path"]: self.delete_project(path, item_id))
+            # delete_button.pack(anchor='w')
+            # Get the screen coordinates for the last column of the item
+            # import ipdb; ipdb.set_trace()
+            # x, y, _, _ = tree.bbox(item_id, column=list(data[0].keys())[-1])
+
+            # # Place the delete button
+            # delete_button.place(in_=tree, x=x, y=y)
+
+            # Bind button click event to the delete_project method
+            delete_button.bind('<ButtonRelease-1>', lambda event, path=item["project_path"], item_id=item_id: self.delete_project(path, item_id))
 
         # Add a vertical scrollbar
         scrollbar = ttk.Scrollbar(self.root, orient="vertical", command=tree.yview)
@@ -57,21 +71,19 @@ class TableClass:
         # Pack the Treeview and scrollbar
         tree.pack(expand=True, fill=tk.BOTH, side="left")
         scrollbar.pack(side="right", fill=tk.Y, padx=(0, 10))
+        self.table_displayed = True
 
-        # Add a custom delete button to each row
-        for item in data:
-            delete_button = ttk.Button(self.root, text="Delete", command=lambda path=item["project_path"]: self.delete_project(path))
-            tree.tag_bind(item["project_path"], '<ButtonRelease-1>', lambda event, path=item["project_path"]: self.delete_project(path))
-            tree.tag_configure(item["project_path"], background='white', text='delete')  # Set the background color
+    def destroy_table(self):
+        # Destroy or withdraw the widgets associated with the table
+        # For example, destroy the root window
+        self.root.destroy()
+        self.table_displayed = False
 
-            # Get the screen coordinates for the item
-            x, y, _, _ = tree.bbox(item["project_path"], column="#1")
-            delete_button.place(x=x + 200, y=y)
-
-    def delete_project(self, project_path):
+    def delete_project(self, project_path, item_id):
         # Implement the logic to delete the project using the project_path
         print(f"Deleting project at path: {project_path}")
-
+        # You can also delete the item from the Treeview
+        # tree.delete(item_id)
 
 def get_existing_clients():
     def list_dirs(path):
@@ -272,9 +284,10 @@ def folder_info_recursive(path, project_name):
                 traverse_folder(entry_path)
 
     traverse_folder(path)
-
+    my_instance = TableClass(root)
     has_files = any(folder['file_count'] > 0 for folder in folders_info)
     if not has_files:
+        # my_instance.destroy_table()
         result_label.config(text= f"All folders inside {project_name} are empty, do you want to delete it ?")
         delete_proyect_button = tk.Button(root, text="Delete", command=lambda: delete_folder(path))
         delete_proyect_button.pack()
@@ -296,7 +309,10 @@ def search_project(project_name):
     if project_name in projects and folder_data != "all folders are empty":
         result_label.config(text=f"Proyecto encontrado: {project_name}\nPreparado para enviar a Backup.")
         result_path.config(text=f"{project_path_f}")
-        send_backup_button = tk.Button(root, text="Enviar a Backup", command=lambda: start_backup(project_name))
+        client_type = project_path_f.split('/')
+        type = client_type[2]
+        client = client_type[3]
+        send_backup_button = tk.Button(root, text="Enviar a Backup", command=lambda: start_backup(type, client, project_name))
         send_backup_button.pack(pady=5, padx=5)
     if  project_name not in projects:
         result_label.config(text="Proyecto no encontrado.")
@@ -432,9 +448,9 @@ class CreateOrderApp:
         combo_clients.set_completion_list(get_existing_clients())
 
         # Añadir entrada para el nombre del proyecto
-        proyectos_path = "./Pruebas/DATA/PROYECTOS"
+        proyectos_path = "./DATA/PROYECTOS"
         proyectos_orders = get_all_orders(proyectos_path)
-        seguimiento_path = "./Pruebas/DATA/SEGUIMIENTOS"
+        seguimiento_path = "./DATA/SEGUIMIENTOS"
         seguimiento_orders = get_all_orders(seguimiento_path)
         all_orders = proyectos_orders + seguimiento_orders
 
@@ -502,9 +518,9 @@ class CreateOrderApp:
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo cargar el logo: {e}")
 
-        proyectos_path = "./Pruebas/DATA/PROYECTOS"
+        proyectos_path = "./DATA/PROYECTOS"
         proyectos_orders = get_all_orders(proyectos_path)
-        seguimiento_path = "./Pruebas/DATA/SEGUIMIENTOS"
+        seguimiento_path = "./DATA/SEGUIMIENTOS"
         seguimiento_orders = get_all_orders(seguimiento_path)
         all_orders = proyectos_orders + seguimiento_orders
 
