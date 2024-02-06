@@ -7,6 +7,7 @@ from datetime import datetime
 from tkinter import messagebox
 from tkinter import ttk
 
+from backup_scripts import get_folder_size
 from backup_scripts import start_backup
 
 
@@ -40,21 +41,24 @@ class TableClass:
     def create_data_table(self, data):
         # Create a Treeview widget
         show_table = True
+        style = ttk.Style()
+        style.theme_use('clam')
+        style.configure("Treeview")
         tree = ttk.Treeview(self.root, columns=list(data[0].keys()), show="headings")
         self.tree = tree
         # Add columns to the Treeview
         for column in data[0].keys():
             tree.heading(column, text=column)
-            tree.column(column, anchor=tk.CENTER)
+            tree.column(column, anchor=tk.CENTER, width=150)
 
         # Add data to the Treeview
         for item in data:
             # Replace the 'project_path' column with the 'Delete' button
-            values = [item[column] for column in data[0].keys() if column != "project_path"] + ["Delete"]
+            values = [item[column] for column in data[0].keys() if column != "Action"] + ["Delete"]
             # Use the item["project_path"] as the item identifier
-            item_id = tree.insert("", tk.END, values=(values), tags=(item["project_path"],))
+            item_id = tree.insert("", tk.END, values=(values), tags=(item["Action"],))
             # Add a custom delete button to each row in the last column
-            delete_button = ttk.Button(self.root, text="Delete", command=lambda path=item["project_path"]: self.delete_project(path, item_id))
+            delete_button = ttk.Button(self.root, text="Delete", command=lambda path=item["Action"]: self.delete_project(path, item_id))
             # delete_button.pack(anchor='w')
             # Get the screen coordinates for the last column of the item
             # import ipdb; ipdb.set_trace()
@@ -66,16 +70,18 @@ class TableClass:
             # Bind button click event to the delete_project method
             # tree.bind('<ButtonRelease-1>', lambda event, path=item["project_path"], item_id=item_id: self.delete_project(path, item_id))
             # tree.tag_bind('<ButtonRelease-1>', lambda event, path=item["project_path"], item_id=item_id: self.delete_project(path, item_id))
-            delete_button.bind('<ButtonRelease-1>', lambda event, path=item["project_path"], item_id=item_id: self.delete_project(path, item_id))
+            delete_button.bind('<ButtonRelease-1>', lambda event, path=item["Action"], item_id=item_id: self.delete_project(path, item_id))
         # Add a vertical scrollbar
         scrollbar = ttk.Scrollbar(self.root, orient="vertical", command=tree.yview)
         tree.configure(yscrollcommand=scrollbar.set)
-
+        xscrollbar = ttk.Scrollbar(self.root, orient="horizontal", command=tree.xview)
+        tree.configure(xscrollcommand=xscrollbar.set)
         # Pack the Treeview and scrollbar
         if show_table:
-            tree.pack(expand=True, fill=tk.BOTH, side="left")
+            xscrollbar.pack(side="bottom", fill="x")
+            tree.pack(expand=True, fill=tk.BOTH, side="left", anchor='w')
 
-            scrollbar.pack(side="right", fill=tk.Y, padx=(0, 10))
+            scrollbar.pack(side="left", fill=tk.Y, padx=(0, 10))
             self.table_displayed = True
         else:
             tree.pack_forget()
@@ -235,7 +241,7 @@ def on_submit(combo_clients, entry_project, project_type_var):
 
 
 #PARTE BACKUP______________________________
-def get_all_project_paths():
+def get_all_project_paths_in_data():
     project_paths = []
     for tipo in ["PROYECTOS", "SEGUIMIENTOS"]:
         project_path = os.path.join(DATA_PATH, tipo)
@@ -245,6 +251,7 @@ def get_all_project_paths():
                 projects = os.listdir(client_path)
                 project_paths.extend(os.path.join(client_path, project) for project in projects)
     return sorted(set(project_paths))
+
 
 def delete_folder(path):
     try:
@@ -281,7 +288,15 @@ def folder_info_recursive(path, project_name):
             last_modified_date = datetime.fromtimestamp(os.path.getmtime(folder_path))
         except OSError:
             last_modified_date = None
-        return {'folder_name': os.path.relpath(folder_path, path), 'is_empty': is_empty, 'file_count': file_count, 'last_modified_date': last_modified_date, 'project_path': folder_path}
+        return {
+            'Folder name': os.path.relpath(folder_path, path),
+            'Folder size': get_folder_size(folder_path),
+            'Is empty': is_empty,
+            'File count': file_count,
+            'Last modified date': last_modified_date,
+            'Editores externos size': get_folder_size(folder_path.replace('DATA', 'EDITORES EXTERNOS')),
+            'Action': folder_path,
+        }
 
     def traverse_folder(current_path):
         for entry in os.listdir(current_path):
@@ -294,9 +309,8 @@ def folder_info_recursive(path, project_name):
     global my_instance
     global delete_proyect_button
     my_instance = TableClass(root)
-    has_files = any(folder['file_count'] > 0 for folder in folders_info)
+    has_files = any(folder['File count'] > 0 for folder in folders_info)
     if not has_files:
-        # my_instance.destroy_table()
         result_label.config(text= f"All folders inside {project_name} are empty, do you want to delete it ?")
         delete_proyect_button = tk.Button(root, text="Delete", command=lambda: delete_folder(path))
         delete_proyect_button.pack()
@@ -313,6 +327,7 @@ def folder_info_recursive(path, project_name):
 
 def search_project(project_name):
     global send_backup_button
+    # send_backup_button = tk.Button(root, text="Enviar a Backup", command=lambda: start_backup(type, client, project_name))
 
     try:
         my_instance.destroy_table()
@@ -323,17 +338,17 @@ def search_project(project_name):
 
     projects = get_all_projects()
     project_path_f = ""
-    for project_path in get_all_project_paths():
+    for project_path in get_all_project_paths_in_data():
         if project_name in project_path:
             project_path_f = project_path
             folder_data = folder_info_recursive(project_path_f, project_name)
     if project_name in projects and folder_data != "all folders are empty":
         result_label.config(text=f"Proyecto encontrado: {project_name} en {project_path_f}\nPreparado para enviar a Backup.")
         client_type = project_path_f.split('/')
+        send_backup_button = tk.Button(root, text="Enviar a Backup", command=lambda: start_backup(type, client, project_name))
+        send_backup_button.pack(pady=5, padx=5, anchor='n')
         type = client_type[2]
         client = client_type[3]
-        send_backup_button = tk.Button(root, text="Enviar a Backup", command=lambda: start_backup(type, client, project_name))
-        send_backup_button.pack(pady=5, padx=5)
     if  project_name not in projects:
         result_label.config(text="Proyecto no encontrado.")
     result_label.pack()
