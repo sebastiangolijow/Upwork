@@ -337,6 +337,7 @@ def search_project(project_name):
         print(e)
 
     projects = get_all_projects()
+    import ipdb; ipdb.set_trace()
     project_path_f = ""
     for project_path in get_all_project_paths_in_data():
         if project_name in project_path:
