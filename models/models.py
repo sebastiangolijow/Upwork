@@ -38,12 +38,20 @@ class TableClass:
         self.table_displayed = False
         self.is_packed = False  # Track packing state
         self.tree = False
+        self.path= ""
+        self.item_id = None
+        self.delete_button = None
+        self.scrollbar = None
+        self.xscrollbar = None
+
     def create_data_table(self, data, width):
         # Create a Treeview widget
         show_table = True
         style = ttk.Style()
         style.theme_use('clam')
         style.configure("Treeview", font=("Helvetica", 12))
+        delete_button = ttk.Button(root, text="Delete", command=lambda: self.delete_project(self.path, self.item_id))
+        self.delete_button = delete_button
         tree = ttk.Treeview(self.root, columns=list(data[0].keys()), show="headings")
         self.tree = tree
         # Add columns to the Treeview
@@ -53,14 +61,17 @@ class TableClass:
 
         # Add data to the Treeview
         for item in data:
-            values = [item[column] for column in data[0].keys() if column != "Action"] + ["Delete"]
-            item_id = tree.insert("", tk.END, values=(values), tags=(item["Action"],))
-            tree.bind('<ButtonRelease-1>', lambda event, path=item["Action"], item_id=item_id: self.delete_project(path, item_id))
-            import ipdb; ipdb.set_trace()
+            values = [item[column] for column in data[0].keys()]
+            item_id = tree.insert("", tk.END, values=(values), tags=(item["Project path"],))
+            tree.bind("<Double-1>", lambda event, path=item["Project path"],item_id=item_id: self.clicker(event, item_id, path))
+
         # Add a vertical scrollbar
         scrollbar = ttk.Scrollbar(self.root, orient="vertical", command=tree.yview)
+        self.scrollbar = scrollbar
         xscrollbar = ttk.Scrollbar(self.root, orient="horizontal", command=tree.xview)
+        self.xscrollbar = xscrollbar
         tree.configure(xscrollcommand=xscrollbar.set, yscrollcommand=scrollbar.set)
+
         # Pack the Treeview and scrollbar
         if show_table:
             xscrollbar.pack(side="bottom", fill="x")
@@ -72,6 +83,11 @@ class TableClass:
             tree.pack_forget()
             self.table_displayed = False
 
+    def clicker(self, event, item_id, path):
+        self.item_id = item_id
+        self.path = path
+        self.delete_button.pack(padx=5, pady=5)
+
     def destroy_table(self):
         # Destroy or withdraw the widgets associated with the table
         # For example, destroy the root window
@@ -80,6 +96,9 @@ class TableClass:
     def delete_project(self, project_path, item_id):
         # Implement the logic to delete the project using the project_path
         print(f"Deleting project at path: {project_path}")
+        self.tree.pack_forget()
+        self.scrollbar.pack_forget()
+        self.xscrollbar.pack_forget()
         # You can also delete the item from the Treeview
         # tree.delete(item_id)
 
@@ -280,7 +299,7 @@ def folder_info_recursive(path, project_name, width):
             'File count': file_count,
             'Last modified date': last_modified_date,
             'Editores externos size': get_folder_size(folder_path.replace('DATA', 'EDITORES EXTERNOS')),
-            'Action': folder_path,
+            'Project path': folder_path,
         }
 
     def traverse_folder(current_path):
@@ -329,7 +348,7 @@ def search_project(project_name):
     if len(project_path_f) == 1:
         folder_data = folder_info_recursive(project_path_f[0], project_name, 150)
     if len(project_path_f) > 1:
-        result_label.config(text=f"Proyecto repetido: {project_name} en {project_path_f}.")
+        result_label.config(text=f"Proyecto repetido: {project_name} en {project_path_f}.", background='yellow', foreground='black')
         for project in project_path_f:
             folder_info_recursive(project, project_name, 50)
     if project_name in projects and folder_data:
@@ -340,7 +359,7 @@ def search_project(project_name):
         send_backup_button = tk.Button(root, text="Enviar a Backup", command=lambda: start_backup(type, client, project_name))
         send_backup_button.pack(pady=5, padx=5, anchor='n')
     if  project_name not in projects:
-        result_label.config(text="Proyecto no encontrado.")
+        result_label.config(text="Proyecto no encontrado.", background='red', foreground='black')
     result_label.pack()
 root = tk.Tk()
 background_color = "#1063FF"
