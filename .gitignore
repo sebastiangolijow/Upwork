@@ -1,0 +1,7 @@
+.DS_Store
+
+# python
+*.pyc
+**/__pycache__
+.project_creator_log.txt
+
