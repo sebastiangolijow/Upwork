@@ -331,7 +331,6 @@ def folder_info_recursive(path, project_name, width):
 
 def search_project(project_name):
     global send_backup_button
-    # send_backup_button = tk.Button(root, text="Enviar a Backup", command=lambda: start_backup(type, client, project_name))
     folder_data = False
     project_path_f = []
     try:
