@@ -352,8 +352,8 @@ def search_project(project_name):
         for project in project_path_f:
             folder_info_recursive(project, project_name, 50)
     if project_name in projects and folder_data:
-        result_label.config(text=f"Proyecto encontrado: {project_name} en {project_path_f}\nPreparado para enviar a Backup.")
-        client_type = project_path_f.split('/')
+        result_label.config(text=f"Proyecto encontrado: {project_name} en {project_path_f[0]}\nPreparado para enviar a Backup.")
+        client_type = project_path_f[0].split('/')
         type = client_type[2]
         client = client_type[3]
         send_backup_button = tk.Button(root, text="Enviar a Backup", command=lambda: start_backup(type, client, project_name))
