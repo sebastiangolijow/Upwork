@@ -7,34 +7,37 @@ from datetime import datetime
 from tkinter import messagebox
 from tkinter import ttk
 
-from backup_scripts import get_folder_size
-from backup_scripts import start_backup
+from backup_scripts import get_folder_size, move_or_delete_filmmakers_folder
+from backup_scripts import move_editores_externos_to_backup
+from backup_scripts import move_project_to_backup_from_data
+
+
+# from backup_scripts import start_backup
 
 
 # Rutas de las carpetas destino
-# BACKUP_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Pruebas/Enviar a Backup"
-BACKUP_PATH = "./BACKUP"
-# DATA_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Pruebas/DATA"
-DATA_PATH = "./DATA"
-# EDITORES_EXTERNOS_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Pruebas/EDITORES EXTERNOS"
-EDITORES_EXTERNOS_PATH = "./EDITORES EXTERNOS"
-# FILMMAKERS_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Pruebas/FILMMAKERS"
-FILMMAKERS_PATH = "./FILMMAKERS"
-
-# CONNECT_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Pruebas/CONNECT"
-CONNECT_PATH = "./CONNECT"
-# PLANTILLA_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Plantillas carpetas para copiar"
-PLANTILLA_PATH = "./Plantillas carpetas para copiar"
-# LOGO_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Stpdn_Logos_Color en tamaño pequeño.png"
-LOGO_PATH = "./Stpdn_Logos_Color.png"
+BACKUP_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Pruebas/Enviar a Backup"
+BACKUP_PATH_TEST = "./BACKUP"
+DATA_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Pruebas/DATA"
+DATA_PATH_TEST = "./DATA"
+EDITORES_EXTERNOS_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Pruebas/EDITORES EXTERNOS"
+EDITORES_EXTERNOS_PATH_TEST = "./EDITORES EXTERNOS"
+FILMMAKERS_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Pruebas/FILMMAKERS"
+FILMMAKERS_PATH_TEST = "./FILMMAKERS"
+CONNECT_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Pruebas/CONNECT"
+CONNECT_PATH_TEST = "./CONNECT"
+PLANTILLA_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Plantillas carpetas para copiar"
+PLANTILLA_PATH_TEST = "./Plantillas carpetas para copiar"
+LOGO_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Stpdn_Logos_Color en tamaño pequeño.png"
+LOGO_PATH_TEST = "./Stpdn_Logos_Color.png"
 
 logo = None
-
 show_table = False
-
+root = tk.Tk()
+background_color = "#1063FF"
 class TableClass:
-    def __init__(self, root):
-        self.root = root
+    def __init__(self, table_root):
+        self.root = table_root
         self.table_displayed = False
         self.is_packed = False  # Track packing state
         self.tree = False
@@ -50,57 +53,53 @@ class TableClass:
         style = ttk.Style()
         style.theme_use('clam')
         style.configure("Treeview", font=("Helvetica", 12))
-        delete_button = ttk.Button(root, text="Delete", command=lambda: self.delete_project(self.path, self.item_id))
+        delete_button = ttk.Button(self.root, text="Delete", command=lambda: self.delete_project(self.path, self.item_id))
         self.delete_button = delete_button
         tree = ttk.Treeview(self.root, columns=list(data[0].keys()), show="headings")
         self.tree = tree
         # Add columns to the Treeview
         for column in data[0].keys():
-            tree.heading(column, text=column)
-            tree.column(column, anchor=tk.CENTER, width=width)
+            self.tree.heading(column, text=column)
+            self.tree.column(column, anchor=tk.CENTER, width=width)
 
         # Add data to the Treeview
         for item in data:
             values = [item[column] for column in data[0].keys()]
-            item_id = tree.insert("", tk.END, values=(values), tags=(item["Project path"],))
-            tree.bind("<Double-1>", lambda event, path=item["Project path"],item_id=item_id: self.clicker(event, item_id, path))
+            self.tree.insert("", tk.END, values=(values), tags=(item["Project path"],))
+        self.tree.bind("<<TreeviewSelect>>", lambda event: self.item_select(event))
 
         # Add a vertical scrollbar
-        scrollbar = ttk.Scrollbar(self.root, orient="vertical", command=tree.yview)
+        scrollbar = ttk.Scrollbar(self.root, orient="vertical", command=self.tree.yview)
         self.scrollbar = scrollbar
-        xscrollbar = ttk.Scrollbar(self.root, orient="horizontal", command=tree.xview)
+        xscrollbar = ttk.Scrollbar(self.root, orient="horizontal", command=self.tree.xview)
         self.xscrollbar = xscrollbar
-        tree.configure(xscrollcommand=xscrollbar.set, yscrollcommand=scrollbar.set)
+        self.tree.configure(xscrollcommand=xscrollbar.set, yscrollcommand=scrollbar.set)
 
         # Pack the Treeview and scrollbar
         if show_table:
             xscrollbar.pack(side="bottom", fill="x")
-            tree.pack(expand=True, fill=tk.BOTH, side="left", anchor='w')
+            self.tree.pack(expand=True, fill=tk.BOTH, side="left", anchor='w')
 
             scrollbar.pack(side="left", fill=tk.Y, padx=(0, 10))
             self.table_displayed = True
         else:
-            tree.pack_forget()
+            self.tree.pack_forget()
             self.table_displayed = False
 
-    def clicker(self, event, item_id, path):
-        self.item_id = item_id
-        self.path = path
+    def item_select(self, event):
+        self.item_id = self.tree.selection()[0]
+        project_path = self.tree.item(self.item_id)['values'][-1]
+        self.path = project_path
         self.delete_button.pack(padx=5, pady=5)
 
     def destroy_table(self):
-        # Destroy or withdraw the widgets associated with the table
-        # For example, destroy the root window
         self.tree.pack_forget()
 
     def delete_project(self, project_path, item_id):
         # Implement the logic to delete the project using the project_path
         print(f"Deleting project at path: {project_path}")
-        self.tree.pack_forget()
-        self.scrollbar.pack_forget()
-        self.xscrollbar.pack_forget()
-        # You can also delete the item from the Treeview
-        # tree.delete(item_id)
+        self.tree.delete(item_id)
+        shutil.rmtree(project_path)
 
 def get_existing_clients():
     def list_dirs(path):
@@ -275,7 +274,7 @@ def get_all_projects():
     return sorted(set(projects))
 
 
-def folder_info_recursive(path, project_name, width):
+def folder_info_recursive(path, project_name, width, is_ftp=False):
     folders_info = []
     def check_folder(folder_path):
         files = []
@@ -292,13 +291,21 @@ def folder_info_recursive(path, project_name, width):
             last_modified_date = datetime.fromtimestamp(os.path.getmtime(folder_path))
         except OSError:
             last_modified_date = None
+        if not is_ftp:
+            return {
+                'Folder name': os.path.relpath(folder_path, path),
+                'Folder size': get_folder_size(folder_path),
+                'Is empty': is_empty,
+                'File count': file_count,
+                'Last modified date': last_modified_date,
+                'Editores externos size': get_folder_size(folder_path.replace('DATA', 'EDITORES EXTERNOS')),
+                'Project path': folder_path,
+            }
         return {
             'Folder name': os.path.relpath(folder_path, path),
             'Folder size': get_folder_size(folder_path),
-            'Is empty': is_empty,
             'File count': file_count,
             'Last modified date': last_modified_date,
-            'Editores externos size': get_folder_size(folder_path.replace('DATA', 'EDITORES EXTERNOS')),
             'Project path': folder_path,
         }
 
@@ -312,10 +319,18 @@ def folder_info_recursive(path, project_name, width):
     traverse_folder(path)
     global my_instance
     global delete_proyect_button
-    my_instance = TableClass(root)
+    if is_ftp:
+        # new_root = tk.Tk()
+        window = tk.Toplevel(root)
+        window.title("FTP 24.7 folder data")
+        tfp_table = TableClass(window)
+        tfp_table.create_data_table(folders_info, width)
+        root.wait_window(window)
+        return folders_info
+
     has_files = any(folder['File count'] > 0 for folder in folders_info)
-    if not has_files:
-        result_label.config(text= f"All folders inside {project_name} are empty, do you want to delete it ?")
+    if not has_files and not is_ftp:
+        result_label.config(text= f"All folders inside {project_name} are empty, do you want to delete it ?", background='red')
         delete_proyect_button = tk.Button(root, text="Delete", command=lambda: delete_folder(path))
         delete_proyect_button.pack()
         return False
@@ -326,7 +341,6 @@ def folder_info_recursive(path, project_name, width):
             print(e)
         my_instance = TableClass(root)
         my_instance.create_data_table(folders_info, width)
-
     return folders_info
 
 def search_project(project_name):
@@ -349,7 +363,7 @@ def search_project(project_name):
     if len(project_path_f) > 1:
         result_label.config(text=f"Proyecto repetido: {project_name} en {project_path_f}.", background='yellow', foreground='black')
         for project in project_path_f:
-            folder_info_recursive(project, project_name, 50)
+            folder_data = folder_info_recursive(project, project_name, 50)
     if project_name in projects and folder_data:
         result_label.config(text=f"Proyecto encontrado: {project_name} en {project_path_f[0]}\nPreparado para enviar a Backup.")
         client_type = project_path_f[0].split('/')
@@ -360,8 +374,6 @@ def search_project(project_name):
     if  project_name not in projects:
         result_label.config(text="Proyecto no encontrado.", background='red', foreground='black')
     result_label.pack()
-root = tk.Tk()
-background_color = "#1063FF"
 
 class AutocompleteCombobox(ttk.Combobox):
     shared_valid_client = False
@@ -370,7 +382,7 @@ class AutocompleteCombobox(ttk.Combobox):
     def __init__(self, master, *args, **kwargs):
         ttk.Combobox.__init__(self, master, *args, **kwargs)
         self.name = ""
-        self.valid_label = tk.Label(master, text="Name already used in another project", font=('Helvetica', 8), fg="red")
+        self.valid_label = tk.Label(master, text="Name already used in another project", font=('Helvetica', 16), fg="red")
         self.valid_label.pack_forget()  # Initially hide the label
         self.create_button = tk.Button(root)
         # self.bind('<FocusOut>', lambda event: self.validate_entry())  # Bind the <FocusOut> event
@@ -589,3 +601,17 @@ class CreateOrderApp:
     def clear_interface(self):
         for widget in root.winfo_children():
             widget.destroy()
+
+def start_backup(project_type, client_name, project_name):
+    ftp_data_project_path  = f"{os.path.join('./FTP 24.7 v2')}/{client_name}/{project_name}"
+    folder_info_recursive(ftp_data_project_path, project_name, 150, True)
+    if project_type and client_name:
+        # Iniciar transferencias paralelas
+        if move_project_to_backup_from_data(project_name, client_name):
+            if not move_editores_externos_to_backup(project_name, client_name):
+                messagebox.showerror("Error", "No se pudo mover la carpeta de EDITORES EXTERNOS.")
+        else:
+            messagebox.showerror("Error", "No se pudo mover la carpeta de DATA.")
+        move_or_delete_filmmakers_folder(project_name, client_name)
+    else:
+        messagebox.showerror("Error", "No se pudo encontrar detalles del proyecto.")
