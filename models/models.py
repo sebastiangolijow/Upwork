@@ -503,9 +503,9 @@ class CreateOrderApp:
         combo_clients.set_completion_list(get_existing_clients())
 
         # Añadir entrada para el nombre del proyecto
-        proyectos_path = "./DATA/PROYECTOS"
+        proyectos_path = f"{DATA_PATH}/PROYECTOS"
         proyectos_orders = get_all_orders(proyectos_path)
-        seguimiento_path = "./DATA/SEGUIMIENTOS"
+        seguimiento_path = f"{DATA_PATH}/SEGUIMIENTOS"
         seguimiento_orders = get_all_orders(seguimiento_path)
         all_orders = proyectos_orders + seguimiento_orders
 
@@ -573,9 +573,9 @@ class CreateOrderApp:
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo cargar el logo: {e}")
 
-        proyectos_path = "./DATA/PROYECTOS"
+        proyectos_path = f"{DATA_PATH}/PROYECTOS"
         proyectos_orders = get_all_orders(proyectos_path)
-        seguimiento_path = "./DATA/SEGUIMIENTOS"
+        seguimiento_path = f"{DATA_PATH}/SEGUIMIENTOS"
         seguimiento_orders = get_all_orders(seguimiento_path)
         all_orders = proyectos_orders + seguimiento_orders
 
