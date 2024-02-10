@@ -110,10 +110,9 @@ class TableClass:
         self.tree.delete(self.item_id)
 
     def delete_project(self, project_path, item_id):
-        # Implement the logic to delete the project using the project_path
         print(f"Deleting project at path: {project_path}")
         self.tree.delete(item_id)
-        # shutil.rmtree(project_path)
+        shutil.rmtree(project_path)
         messagebox.showinfo("Delete", f"Folder at {project_path} deleted")
 
 def get_existing_clients(clients_from=None):
