@@ -7,10 +7,8 @@ from datetime import datetime
 from tkinter import messagebox
 from tkinter import ttk
 
-from backup_scripts import get_folder_size
-from backup_scripts import move_editores_externos_to_backup
-from backup_scripts import move_or_delete_filmmakers_folder
-from backup_scripts import move_project_to_backup_from_data
+from backup_scripts import get_folder_size_int
+from backup_scripts import move_project_to_backup
 
 
 # from backup_scripts import start_backup
@@ -31,6 +29,7 @@ CONNECT_PATH = "./CONNECT"
 PLANTILLA_PATH = "./Plantillas carpetas para copiar"
 # LOGO_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Stpdn_Logos_Color en tamaño pequeño.png"
 LOGO_PATH = "./logo_black.png"
+FTP_PATH = "./FTP 24.7 v2"
 
 logo = None
 show_table = False
@@ -45,8 +44,12 @@ class TableClass:
         self.path= ""
         self.item_id = None
         self.delete_button = None
+        self.send_backup_button = None
         self.scrollbar = None
         self.xscrollbar = None
+        self.type = None
+        self.client = None
+        self.project_name = None
 
     def create_data_table(self, data, width):
         # Create a Treeview widget
@@ -55,6 +58,8 @@ class TableClass:
         style.theme_use('clam')
         style.configure("Treeview", font=("Helvetica", 12))
         delete_button = ttk.Button(self.root, text="Delete", command=lambda: self.delete_project(self.path, self.item_id))
+        send_backup_button = tk.Button(root, text="Enviar a Backup", command=lambda: self.start_backup())
+        self.send_backup_button = send_backup_button
         self.delete_button = delete_button
         tree = ttk.Treeview(self.root, columns=list(data[0].keys()), show="headings")
         self.tree = tree
@@ -91,16 +96,23 @@ class TableClass:
         self.item_id = self.tree.selection()[0]
         project_path = self.tree.item(self.item_id)['values'][-1]
         self.path = project_path
+        self.send_backup_button.pack(padx=5, pady=5)
         self.delete_button.pack(padx=5, pady=5)
 
     def destroy_table(self):
         self.tree.pack_forget()
 
+    def start_backup(self):
+        print(self.path)
+        move_project_to_backup(self.path)
+        self.tree.delete(self.item_id)
+
     def delete_project(self, project_path, item_id):
         # Implement the logic to delete the project using the project_path
         print(f"Deleting project at path: {project_path}")
         self.tree.delete(item_id)
-        shutil.rmtree(project_path)
+        # shutil.rmtree(project_path)
+        messagebox.showinfo("Delete", f"Folder at {project_path} deleted")
 
 def get_existing_clients(clients_from=None):
     def list_dirs(path):
@@ -286,104 +298,104 @@ def get_all_projects():
                 projects.extend(os.listdir(client_path))
     return sorted(set(projects))
 
+def get_project_info(client_folders_path, project_name):
+    project_info = []
+    for client_paths in client_folders_path:
+        for client_folder in os.listdir(client_paths):
+            client_folder_path = os.path.join(client_paths, client_folder)
+            if os.path.isdir(client_folder_path):
+                project_path = os.path.join(client_folder_path, project_name)
+                if os.path.exists(project_path):
+                    # Get project information
+                    size = get_folder_size(project_path)
+                    is_empty = is_folder_empty(project_path)
+                    file_count = count_files(project_path)
+                    last_modified = get_last_modified(project_path)
+                    project_info.append({
+                        "Project name": project_name,
+                        'Folder size': size,
+                        'Is empty': is_empty,
+                        'File count': file_count,
+                        'Last modified date': last_modified,
+                        'Project path': project_path,
+                    })
+    return project_info
 
-def folder_info_recursive(path, project_name, width, is_ftp=False):
-    folders_info = []
-    def check_folder(folder_path):
-        files = []
-        for entry in os.listdir(folder_path):
-            entry_path = os.path.join(folder_path, entry)
-            if os.path.isfile(entry_path):
-                files.append(entry_path.lower())
+def get_order_info(order_name, projects_folders):
+    order_info = []
 
-        is_empty = len(files) == 0
-        file_count = len([file for file in files if file.endswith(('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.mp4', '.avi', '.mkv', '.mp3'))])
+    for projects_folder in projects_folders:
+        for tipo in ["PROYECTOS", "SEGUIMIENTOS"]:
+            project_path = os.path.join(projects_folder, tipo)
+            for client in os.listdir(project_path):
+                client_path = os.path.join(project_path, client)
+                if os.path.isdir(client_path):
+                    for order in os.listdir(client_path):
+                        order_path = os.path.join(client_path, order)
+                        if os.path.isdir(order_path) and order == order_name:
+                            order_size = get_folder_size(order_path)
+                            is_empty = is_folder_empty(order_path)
+                            file_count = count_files(order_path)
+                            last_modified = get_last_modified(order_path)
+                            order_info.append({
+                                'Project name': order,
+                                'Folder size': order_size,
+                                'Is empty': is_empty,
+                                'File count': file_count,
+                                'Last modified date': last_modified,
+                                'Project path': order_path,
+                            })
+    FTP_CONNECT_FOLDERS = [CONNECT_PATH, FTP_PATH]
+    data = get_project_info(FTP_CONNECT_FOLDERS, order_name)
+    order_info.extend(data)
+    return order_info
 
-        # Get the last modified date of the folder
-        try:
-            last_modified_date = datetime.fromtimestamp(os.path.getmtime(folder_path))
-        except OSError:
-            last_modified_date = None
-        if not is_ftp:
-            return {
-                'Folder name': os.path.relpath(folder_path, path),
-                'Folder size': get_folder_size(folder_path),
-                'Is empty': is_empty,
-                'File count': file_count,
-                'Last modified date': last_modified_date,
-                'Editores externos size': get_folder_size(folder_path.replace('DATA', 'EDITORES EXTERNOS')),
-                'Project path': folder_path,
-            }
-        return {
-            'Folder name': os.path.relpath(folder_path, path),
-            'Folder size': get_folder_size(folder_path),
-            'File count': file_count,
-            'Last modified date': last_modified_date,
-            'Project path': folder_path,
-        }
+def count_files(folder_path):
+    return sum(1 for _ in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, _)))
 
-    def traverse_folder(current_path):
-        for entry in os.listdir(current_path):
-            entry_path = os.path.join(current_path, entry)
-            if os.path.isdir(entry_path):
-                folders_info.append(check_folder(entry_path))
-                traverse_folder(entry_path)
+def get_folder_size(folder_path):
+    total_size = sum(os.path.getsize(os.path.join(dirpath, filename)) for dirpath, _, filenames in os.walk(folder_path) for filename in filenames)
+    total_size_gb = round(total_size / (1024**3), 2)
+    return f"{total_size_gb} GB"
 
-    traverse_folder(path)
-    global my_instance
-    global delete_proyect_button
-    if is_ftp:
-        # new_root = tk.Tk()
-        window = tk.Toplevel(root)
-        window.title("FTP 24.7 folder data")
-        tfp_table = TableClass(window)
-        tfp_table.create_data_table(folders_info, width)
-        root.wait_window(window)
-        return folders_info
+def is_folder_empty(folder_path):
+    return len(os.listdir(folder_path)) == 0
 
-    has_files = any(folder['File count'] > 0 for folder in folders_info)
-    if not has_files and not is_ftp:
-        result_label.config(text= f"All folders inside {project_name} are empty, do you want to delete it ?", background='red')
-        delete_proyect_button = tk.Button(root, text="Delete", command=lambda: delete_folder(path))
-        delete_proyect_button.pack()
-        return False
-    else:
-        try:
-            delete_proyect_button.pack_forget()
-        except Exception as e:
-            print(e)
-        my_instance = TableClass(root)
-        my_instance.create_data_table(folders_info, width)
-    return folders_info
+def count_files_in_folder(folder_path):
+    return len([name for name in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, name))])
+
+def get_last_modified(folder_path):
+    timestamp = os.path.getmtime(folder_path)
+    return datetime.fromtimestamp(timestamp)
 
 def search_project(project_name):
-    global send_backup_button
     folder_data = False
     project_path_f = []
     try:
         my_instance.destroy_table()
-        send_backup_button.pack_forget()
         result_label.pack_forget()
     except Exception as e:
         print(e)
 
     projects = get_all_projects()
+    root_folders = [DATA_PATH, EDITORES_EXTERNOS_PATH, FILMMAKERS_PATH]
     for project_path in get_all_project_paths_in_data():
         if project_name in project_path:
             project_path_f.append(project_path)
     if len(project_path_f) == 1:
-        folder_data = folder_info_recursive(project_path_f[0], project_name, 150)
+        project_size = get_folder_size_int(project_path_f[0])
+        if project_size > 0:
+            result_label.config(text=f"Proyecto encontrado: {project_name} en {project_path_f[0]}\nPreparado para enviar a Backup.")
+        else:
+            result_label.config(text=f"Proyecto {project_name} esta vacio.", background='red')
+        folder_data = get_order_info(project_name, root_folders)
+        my_instance = TableClass(root)
+        my_instance.create_data_table(folder_data, 150)
     if len(project_path_f) > 1:
-        result_label.config(text=f"Proyecto repetido: {project_name} en {project_path_f}.", background='yellow', foreground='black')
-        for project in project_path_f:
-            folder_data = folder_info_recursive(project, project_name, 50)
-    if project_name in projects and folder_data:
-        result_label.config(text=f"Proyecto encontrado: {project_name} en {project_path_f[0]}\nPreparado para enviar a Backup.")
-        client_type = project_path_f[0].split('/')
-        type = client_type[2]
-        client = client_type[3]
-        send_backup_button = tk.Button(root, text="Enviar a Backup", command=lambda: start_backup(type, client, project_name))
-        send_backup_button.pack(pady=5, padx=5, anchor='n')
+        result_label.config(text=f"Proyecto repetido: {project_name} en \n{project_path_f}.", background='yellow', foreground='black')
+        folder_data = get_order_info(project_name, root_folders)
+        my_instance = TableClass(root)
+        my_instance.create_data_table(folder_data, 50)
     if  project_name not in projects:
         result_label.config(text="Proyecto no encontrado.", background='red', foreground='black')
     result_label.pack()
@@ -469,11 +481,11 @@ class CreateOrderApp:
         self.archive_project_button = tk.Button(self.menu_frame, text="Proyecto Terminado, enviar a Backup", command=self.show_archive_project_interface)
         self.archive_project_button.pack(side=tk.LEFT)
         self.combo_clients = None
+
     def update_value(self):
         self.clients = get_existing_clients(self.project_type_var.get())
         self.combo_clients._valid_items = self.clients
         self.combo_clients.set_completion_list(self.clients)
-        import ipdb; ipdb.set_trace()
 
     def show_main_menu(self):
         self.clear_interface()
@@ -517,7 +529,6 @@ class CreateOrderApp:
         label_client = tk.Label(root, text="Nombre del Cliente:")
         self.combo_clients = AutocompleteCombobox(root)
         self.combo_clients.name = "clients"
-        import ipdb; ipdb.set_trace()
         self.combo_clients._valid_items = self.clients
         self.combo_clients.set_completion_list(self.clients)
 
@@ -620,17 +631,3 @@ class CreateOrderApp:
     def clear_interface(self):
         for widget in root.winfo_children():
             widget.destroy()
-
-def start_backup(project_type, client_name, project_name):
-    ftp_data_project_path  = f"{os.path.join('./FTP 24.7 v2')}/{client_name}/{project_name}"
-    folder_info_recursive(ftp_data_project_path, project_name, 150, True)
-    if project_type and client_name:
-        # Iniciar transferencias paralelas
-        if move_project_to_backup_from_data(project_name, client_name):
-            if not move_editores_externos_to_backup(project_name, client_name):
-                messagebox.showerror("Error", "No se pudo mover la carpeta de EDITORES EXTERNOS.")
-        else:
-            messagebox.showerror("Error", "No se pudo mover la carpeta de DATA.")
-        move_or_delete_filmmakers_folder(project_name, client_name)
-    else:
-        messagebox.showerror("Error", "No se pudo encontrar detalles del proyecto.")
