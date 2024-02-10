@@ -101,6 +101,8 @@ class TableClass:
 
     def destroy_table(self):
         self.tree.pack_forget()
+        self.xscrollbar.pack_forget()
+        self.scrollbar.pack_forget()
 
     def start_backup(self):
         print(self.path)
@@ -368,37 +370,43 @@ def get_last_modified(folder_path):
     timestamp = os.path.getmtime(folder_path)
     return datetime.fromtimestamp(timestamp)
 
-def search_project(project_name):
-    folder_data = False
-    project_path_f = []
-    try:
-        my_instance.destroy_table()
-        result_label.pack_forget()
-    except Exception as e:
-        print(e)
+class SearchProjectClass:
+    def __init__(self) -> None:
+        self.table = False
 
-    projects = get_all_projects()
-    root_folders = [DATA_PATH, EDITORES_EXTERNOS_PATH, FILMMAKERS_PATH]
-    for project_path in get_all_project_paths_in_data():
-        if project_name in project_path:
-            project_path_f.append(project_path)
-    if len(project_path_f) == 1:
-        project_size = get_folder_size_int(project_path_f[0])
-        if project_size > 0:
-            result_label.config(text=f"Proyecto encontrado: {project_name} en {project_path_f[0]}\nPreparado para enviar a Backup.")
-        else:
-            result_label.config(text=f"Proyecto {project_name} esta vacio.", background='red')
-        folder_data = get_order_info(project_name, root_folders)
-        my_instance = TableClass(root)
-        my_instance.create_data_table(folder_data, 150)
-    if len(project_path_f) > 1:
-        result_label.config(text=f"Proyecto repetido: {project_name} en \n{project_path_f}.", background='yellow', foreground='black')
-        folder_data = get_order_info(project_name, root_folders)
-        my_instance = TableClass(root)
-        my_instance.create_data_table(folder_data, 50)
-    if  project_name not in projects:
-        result_label.config(text="Proyecto no encontrado.", background='red', foreground='black')
-    result_label.pack()
+    def search_project(self, project_name):
+        folder_data = False
+        project_path_f = []
+        try:
+            self.table.destroy_table()
+            result_label.pack_forget()
+        except Exception as e:
+            print(e)
+
+        projects = get_all_projects()
+        root_folders = [DATA_PATH, EDITORES_EXTERNOS_PATH, FILMMAKERS_PATH]
+        for project_path in get_all_project_paths_in_data():
+            if project_name in project_path:
+                project_path_f.append(project_path)
+        if len(project_path_f) == 1:
+            project_size = get_folder_size_int(project_path_f[0])
+            if project_size > 0:
+                result_label.config(text=f"Proyecto encontrado: {project_name} en {project_path_f[0]}\nPreparado para enviar a Backup.")
+            else:
+                result_label.config(text=f"Proyecto {project_name} esta vacio.", background='red')
+            folder_data = get_order_info(project_name, root_folders)
+            my_instance = TableClass(root)
+            self.table = my_instance
+            self.table.create_data_table(folder_data, 150)
+        if len(project_path_f) > 1:
+            result_label.config(text=f"Proyecto repetido: {project_name} en \n{project_path_f}.", background='yellow', foreground='black')
+            folder_data = get_order_info(project_name, root_folders)
+            my_instance = TableClass(root)
+            self.table = my_instance
+            self.table.create_data_table(folder_data, 50)
+        if  project_name not in projects:
+            result_label.config(text="Proyecto no encontrado.", background='red', foreground='black')
+        result_label.pack()
 
 class AutocompleteCombobox(ttk.Combobox):
     shared_valid_client = False
@@ -618,7 +626,8 @@ class CreateOrderApp:
         search_entry.pack(pady=5, padx=5)
 
         # Botón de búsqueda
-        search_button = tk.Button(root, text="Buscar Proyecto", command=lambda: search_project(search_entry.get()))
+        searchObject = SearchProjectClass()
+        search_button = tk.Button(root, text="Buscar Proyecto", command=lambda: searchObject.search_project(search_entry.get()))
         search_button.pack(pady=5, padx=5)
 
         # Resultados de búsqueda
