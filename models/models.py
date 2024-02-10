@@ -7,8 +7,9 @@ from datetime import datetime
 from tkinter import messagebox
 from tkinter import ttk
 
-from backup_scripts import get_folder_size, move_or_delete_filmmakers_folder
+from backup_scripts import get_folder_size
 from backup_scripts import move_editores_externos_to_backup
+from backup_scripts import move_or_delete_filmmakers_folder
 from backup_scripts import move_project_to_backup_from_data
 
 
@@ -16,20 +17,20 @@ from backup_scripts import move_project_to_backup_from_data
 
 
 # Rutas de las carpetas destino
-BACKUP_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Pruebas/Enviar a Backup"
-BACKUP_PATH_TEST = "./BACKUP"
-DATA_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Pruebas/DATA"
-DATA_PATH_TEST = "./DATA"
-EDITORES_EXTERNOS_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Pruebas/EDITORES EXTERNOS"
-EDITORES_EXTERNOS_PATH_TEST = "./EDITORES EXTERNOS"
-FILMMAKERS_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Pruebas/FILMMAKERS"
-FILMMAKERS_PATH_TEST = "./FILMMAKERS"
-CONNECT_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Pruebas/CONNECT"
-CONNECT_PATH_TEST = "./CONNECT"
-PLANTILLA_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Plantillas carpetas para copiar"
-PLANTILLA_PATH_TEST = "./Plantillas carpetas para copiar"
-LOGO_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Stpdn_Logos_Color en tamaño pequeño.png"
-LOGO_PATH_TEST = "./Stpdn_Logos_Color.png"
+# BACKUP_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Pruebas/Enviar a Backup"
+BACKUP_PATH = "./BACKUP"
+# DATA_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Pruebas/DATA"
+DATA_PATH = "./DATA"
+# EDITORES_EXTERNOS_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Pruebas/EDITORES EXTERNOS"
+EDITORES_EXTERNOS_PATH = "./EDITORES EXTERNOS"
+# FILMMAKERS_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Pruebas/FILMMAKERS"
+FILMMAKERS_PATH = "./FILMMAKERS"
+# CONNECT_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Pruebas/CONNECT"
+CONNECT_PATH = "./CONNECT"
+# PLANTILLA_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Plantillas carpetas para copiar"
+PLANTILLA_PATH = "./Plantillas carpetas para copiar"
+# LOGO_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Stpdn_Logos_Color en tamaño pequeño.png"
+LOGO_PATH = "./logo_black.png"
 
 logo = None
 show_table = False
@@ -101,14 +102,26 @@ class TableClass:
         self.tree.delete(item_id)
         shutil.rmtree(project_path)
 
-def get_existing_clients():
+def get_existing_clients(clients_from=None):
     def list_dirs(path):
         return [d for d in os.listdir(path) if os.path.isdir(os.path.join(path, d))]
 
     project_clients = set(list_dirs(os.path.join(DATA_PATH, "PROYECTOS")))
     seguimiento_clients = set(list_dirs(os.path.join(DATA_PATH, "SEGUIMIENTOS")))
-    all_clients = project_clients.union(seguimiento_clients)
-    return sorted(list(all_clients))
+    if clients_from == 'SEGUIMIENTOS':
+        return sorted(list(seguimiento_clients))
+    if clients_from == 'PROYECTOS':
+        return sorted(list(project_clients))
+    else:
+        return project_clients.union(seguimiento_clients)
+
+def get_all_clients():
+    def list_dirs(path):
+        return [d for d in os.listdir(path) if os.path.isdir(os.path.join(path, d))]
+
+    project_clients = set(list_dirs(os.path.join(DATA_PATH, "PROYECTOS")))
+    seguimiento_clients = set(list_dirs(os.path.join(DATA_PATH, "SEGUIMIENTOS")))
+    return project_clients.union(seguimiento_clients)
 
 def get_all_orders(base_path):
     all_orders = []
@@ -385,10 +398,8 @@ class AutocompleteCombobox(ttk.Combobox):
         self.valid_label = tk.Label(master, text="Name already used in another project", font=('Helvetica', 16), fg="red")
         self.valid_label.pack_forget()  # Initially hide the label
         self.create_button = tk.Button(root)
-        # self.bind('<FocusOut>', lambda event: self.validate_entry())  # Bind the <FocusOut> event
         self._valid_items = set()
         self.last_key_release_time = 0
-
         self.bind('<KeyRelease>', self.handle_keyrelease)
 
     def set_completion_list(self, completion_list):
@@ -450,12 +461,19 @@ class CreateOrderApp:
         # Menú inicial para elegir la acción a realizar
         self.menu_frame = tk.Frame(root)
         self.menu_frame.pack()
-
+        self.project_selected  = False
         self.new_project_button = tk.Button(self.menu_frame, text="Crear Nuevo Proyecto", command=self.show_new_project_interface)
         self.new_project_button.pack(side=tk.LEFT)
-
+        self.project_type_var = None
+        self.clients = get_all_clients()
         self.archive_project_button = tk.Button(self.menu_frame, text="Proyecto Terminado, enviar a Backup", command=self.show_archive_project_interface)
         self.archive_project_button.pack(side=tk.LEFT)
+        self.combo_clients = None
+    def update_value(self):
+        self.clients = get_existing_clients(self.project_type_var.get())
+        self.combo_clients._valid_items = self.clients
+        self.combo_clients.set_completion_list(self.clients)
+        import ipdb; ipdb.set_trace()
 
     def show_main_menu(self):
         self.clear_interface()
@@ -497,10 +515,11 @@ class CreateOrderApp:
 
         # Añadir menú desplegable con función de autocompletar para el nombre del cliente
         label_client = tk.Label(root, text="Nombre del Cliente:")
-        combo_clients = AutocompleteCombobox(root)
-        combo_clients.name = "clients"
-        combo_clients._valid_items = get_existing_clients()
-        combo_clients.set_completion_list(get_existing_clients())
+        self.combo_clients = AutocompleteCombobox(root)
+        self.combo_clients.name = "clients"
+        import ipdb; ipdb.set_trace()
+        self.combo_clients._valid_items = self.clients
+        self.combo_clients.set_completion_list(self.clients)
 
         # Añadir entrada para el nombre del proyecto
         proyectos_path = f"{DATA_PATH}/PROYECTOS"
@@ -516,21 +535,21 @@ class CreateOrderApp:
         entry_project.set_completion_list(all_orders)
 
         # Opciones para el tipo de proyecto, con "SEGUIMIENTOS" seleccionado por defecto
-        project_type_var = tk.StringVar(value="SEGUIMIENTOS")
-        radio_project = tk.Radiobutton(root, text="Proyecto", variable=project_type_var, value="PROYECTOS")
-        radio_follow_up = tk.Radiobutton(root, text="Seguimiento", variable=project_type_var, value="SEGUIMIENTOS")
+        self.project_type_var = tk.StringVar(value=None)
+        radio_project = tk.Radiobutton(root, text="Proyecto", variable=self.project_type_var, value="PROYECTOS", command=self.update_value)
+        radio_follow_up = tk.Radiobutton(root, text="Seguimiento", variable=self.project_type_var, value="SEGUIMIENTOS", command=self.update_value)
 
         # Botón para crear las carpetas
         create_button = entry_project.create_button
         create_button.config(text="Crear Carpetas")
-        create_button.config(command=lambda: on_submit(combo_clients, entry_project, project_type_var))
+        create_button.config(command=lambda: on_submit(self.combo_clients, entry_project, self.project_type_var))
         create_button.config(state=tk.DISABLED)
 
 
         def back():
             description_label.destroy()
             label_client.destroy()
-            combo_clients.destroy()
+            self.combo_clients.destroy()
             label_project.destroy()
             entry_project.destroy()
             create_button.destroy()
@@ -547,17 +566,17 @@ class CreateOrderApp:
 
         description_label.pack()
 
+        radio_follow_up.pack()
+
+        radio_project.pack()
+
         label_client.pack()
 
-        combo_clients.pack()
+        self.combo_clients.pack()
 
         label_project.pack()
 
         entry_project.pack()
-
-        radio_follow_up.pack()
-
-        radio_project.pack()
 
         create_button.pack()
 
