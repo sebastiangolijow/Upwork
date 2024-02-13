@@ -34,6 +34,16 @@ def delete_folder(folder_path):
     except Exception as e:
         print(f"An error occurred while deleting the folder '{folder_path}': {e}")
 
+def find_client_folder(backup_root, client_name):
+    seguimientos_root = os.path.join(backup_root, "SEGUIMIENTOS")
+    proyectos_root = os.path.join(backup_root, "PROYECTOS")
+
+    for root in [seguimientos_root, proyectos_root]:
+        for dirpath, dirnames, filenames in os.walk(root):
+            if client_name in dirnames:
+                return os.path.join(dirpath)
+    return None
+
 def move_project_to_backup(project_path):
     source_data = os.path.join(project_path)
     if os.path.exists(source_data):
@@ -47,10 +57,17 @@ def move_project_to_backup(project_path):
             return True
         project_name = source_data.split('/')[-1]
         client_name = source_data.split('/')[-2]
-        backup_data = os.path.join(BACKUP_PATH, client_name, project_name)
-        if not os.path.exists(backup_data):
-            os.makedirs(os.path.dirname(backup_data), exist_ok=True)
-        backup_data = (os.path.join(BACKUP_PATH, client_name, project_name) + '/DATA') if "DATA" in source_data else ((os.path.join(BACKUP_PATH, client_name, project_name) + '/EDITORES EXTERNOS') if "EDITORES EXTERNOS" in source_data else (os.path.join(BACKUP_PATH, client_name, project_name) + '/FILMMAKERS'))
+        if "/PROYECTOS/" in project_path:
+            backup_data_path = BACKUP_PATH + "/PROYECTOS"
+        if "/SEGUIMIENTOS/" in project_path:
+            backup_data_path = BACKUP_PATH + "/SEGUIMIENTOS"
+        if not "/SEGUIMIENTOS/" in project_path and not "/PROYECTOS/" in project_path:
+            backup_data_path = find_client_folder(BACKUP_PATH, client_name)
+        import ipdb; ipdb.set_trace()
+        if not os.path.exists(backup_data_path):
+            os.makedirs(os.path.dirname(backup_data_path), exist_ok=True)
+        backup_data = (os.path.join(backup_data_path, client_name, project_name) + '/DATA') if "DATA" in source_data else ((os.path.join(backup_data_path, client_name, project_name) + '/EDITORES EXTERNOS') if "EDITORES EXTERNOS" in source_data else (os.path.join(backup_data_path, client_name, project_name) + '/FILMMAKERS'))
+        print(backup_data_path)
         is_data_moved, _ = move_folders(source_data, backup_data)
         if is_data_moved:
             print(f"Proyecto '{project_name}' movido a Backup desde DATA.")

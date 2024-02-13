@@ -11,9 +11,6 @@ from backup_scripts import get_folder_size_int
 from backup_scripts import move_project_to_backup
 
 
-# from backup_scripts import start_backup
-
-
 # Rutas de las carpetas destino
 # BACKUP_PATH = "/Users/arnau/Stupendastic Dropbox/Admin Stupendastic/Dropbox-Stupendastic/0. Scripts/Manual/Crear_nuevo_proyecto/Pruebas/Enviar a Backup"
 BACKUP_PATH = "./BACKUP"
@@ -299,6 +296,9 @@ def get_all_projects():
                 projects.extend(os.listdir(client_path))
     return sorted(set(projects))
 
+def get_project_type(project_path):
+    return "CONNECT" if "/CONNECT/" in project_path else ("DATA" if "/DATA" in project_path else ("EDITORES EXTERNOS" if "EDITORES EXTERNOS" in project_path else ("FTP 24.7 v2" if "FTP 24.7 v2" in project_path else "FILMMAKERS")))
+
 def get_project_info(client_folders_path, project_name):
     project_info = []
     for client_paths in client_folders_path:
@@ -310,13 +310,11 @@ def get_project_info(client_folders_path, project_name):
                     # Get project information
                     size = get_folder_size(project_path)
                     is_empty = is_folder_empty(project_path)
-                    file_count = count_files(project_path)
                     last_modified = get_last_modified(project_path)
                     project_info.append({
-                        "Project name": project_name,
+                        "Root folder": get_project_type(project_path),
                         'Folder size': size,
                         'Is empty': is_empty,
-                        'File count': file_count,
                         'Last modified date': last_modified,
                         'Project path': project_path,
                     })
@@ -336,13 +334,11 @@ def get_order_info(order_name, projects_folders):
                         if os.path.isdir(order_path) and order == order_name:
                             order_size = get_folder_size(order_path)
                             is_empty = is_folder_empty(order_path)
-                            file_count = count_files(order_path)
                             last_modified = get_last_modified(order_path)
                             order_info.append({
-                                'Project name': order,
+                                'Root folder': get_project_type(order_path),
                                 'Folder size': order_size,
                                 'Is empty': is_empty,
-                                'File count': file_count,
                                 'Last modified date': last_modified,
                                 'Project path': order_path,
                             })
@@ -380,7 +376,7 @@ class SearchProjectClass:
             self.table.destroy_table()
             result_label.pack_forget()
         except Exception as e:
-            print(e)
+            pass
 
         projects = get_all_projects()
         root_folders = [DATA_PATH, EDITORES_EXTERNOS_PATH, FILMMAKERS_PATH]
