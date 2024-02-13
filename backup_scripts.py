@@ -63,7 +63,6 @@ def move_project_to_backup(project_path):
             backup_data_path = BACKUP_PATH + "/SEGUIMIENTOS"
         if not "/SEGUIMIENTOS/" in project_path and not "/PROYECTOS/" in project_path:
             backup_data_path = find_client_folder(BACKUP_PATH, client_name)
-        import ipdb; ipdb.set_trace()
         if not os.path.exists(backup_data_path):
             os.makedirs(os.path.dirname(backup_data_path), exist_ok=True)
         backup_data = (os.path.join(backup_data_path, client_name, project_name) + '/DATA') if "DATA" in source_data else ((os.path.join(backup_data_path, client_name, project_name) + '/EDITORES EXTERNOS') if "EDITORES EXTERNOS" in source_data else (os.path.join(backup_data_path, client_name, project_name) + '/FILMMAKERS'))
